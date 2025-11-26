@@ -1,0 +1,38 @@
+{
+    "name": "equidna/bird-flock",
+    "description": "Bird Flock - messaging bus for multi-channel outbound messaging (SMS, WhatsApp, Email) with DLQ and idempotency",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Gabriel Ruelas",
+            "email": "gruelas@gruelas.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.3",
+        "illuminate/support": "^10 || ^11 || ^12",
+        "illuminate/queue": "^10 || ^11 || ^12",
+        "illuminate/events": "^10 || ^11 || ^12",
+        "guzzlehttp/guzzle": "^7.0",
+        "twilio/sdk": "^6.0",
+        "sendgrid/sendgrid": "^7.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Equidna\\BirdFlock\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Equidna\\BirdFlock\\BirdFlockServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
