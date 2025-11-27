@@ -2,9 +2,7 @@
 
 namespace Equidna\BirdFlock\Tests\Support;
 
-use Illuminate\Contracts\Bus\Dispatcher;
-
-class FakeDispatcher implements Dispatcher
+final class DispatcherFake implements \Illuminate\Contracts\Bus\Dispatcher
 {
     public array $dispatched = [];
 

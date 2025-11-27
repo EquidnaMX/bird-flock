@@ -2,7 +2,7 @@
 
 namespace Equidna\BirdFlock\Tests\Support;
 
-class FakeTwilioMessageList
+final class TwilioMessageListFake
 {
     public function create(string $to, array $params = [])
     {
