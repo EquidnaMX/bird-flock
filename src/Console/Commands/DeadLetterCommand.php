@@ -14,6 +14,17 @@ class DeadLetterCommand extends Command
         {--limit=50 : Number of entries to show when listing}';
 
     protected $description = 'Inspect and manage Bird Flock dead-letter messages.';
+    /**
+     * Detailed help shown by `php artisan help bird-flock:dead-letter`.
+     *
+     * Examples:
+     *  php artisan bird-flock:dead-letter list --limit=50
+     *  php artisan bird-flock:dead-letter replay --id=ulid_0000 --force
+     *  php artisan bird-flock:dead-letter purge --before="2025-01-01"
+     */
+    protected $help = "Manage message dead-letter queue.\n\n" .
+        "Actions: list, replay, purge.\n" .
+        "Examples: see README or docs/CLI.md for expanded usage and safe replay guidance.";
 
     public function __construct(
         private readonly DeadLetterService $service
@@ -50,7 +61,7 @@ class DeadLetterCommand extends Command
 
         $this->table(
             ['Entry ID', 'Message ID', 'Channel', 'Attempts', 'Error Code', 'Created'],
-            $entries->map(fn ($entry) => [
+            $entries->map(fn($entry) => [
                 $entry->id,
                 $entry->message_id,
                 $entry->channel,

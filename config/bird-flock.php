@@ -1,13 +1,13 @@
 <?php
 
 return [
-    'default_queue' => env('BIRD_FLOCK_DEFAULT_QUEUE', env('MESSAGING_QUEUE', 'default')),
+    'default_queue' => env(
+        'BIRD_FLOCK_DEFAULT_QUEUE',
+        env('MESSAGING_QUEUE', 'default')
+    ),
     'tables' => [
         'prefix' => env('BIRD_FLOCK_TABLE_PREFIX', 'bird_flock_'),
-        'outbound_messages' => env(
-            'BIRD_FLOCK_OUTBOUND_TABLE',
-            env('BIRD_FLOCK_TABLE_PREFIX', 'bird_flock_') . 'outbound_messages'
-        ),
+        'outbound_messages' => env('BIRD_FLOCK_TABLE_PREFIX', 'bird_flock_') . 'outbound_messages',
     ],
 
     'twilio' => [
@@ -57,9 +57,6 @@ return [
 
     'dead_letter' => [
         'enabled' => env('BIRD_FLOCK_DLQ_ENABLED', true),
-        'table' => env(
-            'BIRD_FLOCK_DLQ_TABLE',
-            env('BIRD_FLOCK_TABLE_PREFIX', 'bird_flock_') . 'dead_letters'
-        ),
+        'table' => env('BIRD_FLOCK_TABLE_PREFIX', 'bird_flock_') . 'dead_letters',
     ],
 ];

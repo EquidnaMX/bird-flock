@@ -17,6 +17,7 @@ use Equidna\BirdFlock\Contracts\OutboundMessageRepositoryInterface;
 use Equidna\BirdFlock\DTO\FlightPlan;
 use Equidna\BirdFlock\Jobs\DispatchMessageJob;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Database\QueryException;
 use Equidna\BirdFlock\Support\Logger;
 use Equidna\BirdFlock\Events\MessageQueued;
 use Equidna\BirdFlock\Events\MessageRetryScheduled;
@@ -89,17 +90,72 @@ final class BirdFlock
         }
 
         if ($shouldCreate) {
-            $repository->create([
-                'id_outboundMessage' => $messageId,
-                'channel' => $payload->channel,
-                'to' => $payload->to,
-                'subject' => $payload->subject,
-                'templateKey' => $payload->templateKey,
-                'payload' => $payload->toArray(),
-                'status' => 'queued',
-                'idempotencyKey' => $payload->idempotencyKey,
-                'queuedAt' => now(),
-            ]);
+            // Make create DB-race safe: handle concurrent inserts that violate
+            // the unique index on `idempotencyKey` (migration index `uniq_idempotencyKey`).
+            $maxAttempts = 3;
+            $attempt = 0;
+
+            while ($attempt < $maxAttempts) {
+                try {
+                    $repository->create([
+                        'id_outboundMessage' => $messageId,
+                        'channel' => $payload->channel,
+                        'to' => $payload->to,
+                        'subject' => $payload->subject,
+                        'templateKey' => $payload->templateKey,
+                        'payload' => $payload->toArray(),
+                        'status' => 'queued',
+                        'idempotencyKey' => $payload->idempotencyKey,
+                        'queuedAt' => now(),
+                    ]);
+
+                    // Created successfully
+                    break;
+                } catch (QueryException $e) {
+                    // Detect unique-constraint errors across common drivers.
+                    $sqlState = $e->errorInfo[0] ?? null;
+                    $driverCode = $e->errorInfo[1] ?? null;
+
+                    // Normalize common SQL error indicators to a single, readable predicate.
+                    $pgUniqueStates = ['23505'];
+                    $integrityStates = ['23000', '19'];
+                    $isPostgresUnique = in_array($sqlState, $pgUniqueStates, true);
+                    $isIntegrityConstraint = in_array($sqlState, $integrityStates, true);
+                    $isMysqlDuplicateKey = $driverCode === 1062;
+                    $messageIndicatesUnique = str_contains(strtolower($e->getMessage()), 'unique');
+
+                    $isUniqueConstraint = $isPostgresUnique
+                        || $isIntegrityConstraint
+                        || $isMysqlDuplicateKey
+                        || $messageIndicatesUnique;
+
+                    if (! $isUniqueConstraint) {
+                        throw $e; // unknown DB error, rethrow
+                    }
+
+                    // Another process inserted the same idempotency key. Re-query to get
+                    // the existing message id and return that value instead of failing.
+                    if ($payload->idempotencyKey) {
+                        $existing = $repository->findByIdempotencyKey($payload->idempotencyKey);
+                        if ($existing) {
+                            Logger::info('bird-flock.dispatch.create_conflict', [
+                                'existing_message_id' => $existing['id_outboundMessage'],
+                                'channel' => $payload->channel,
+                                'idempotency_key' => $payload->idempotencyKey,
+                            ]);
+
+                            $messageId = $existing['id_outboundMessage'];
+                            $shouldCreate = false;
+                            break;
+                        }
+                    }
+
+                    // If we reach here, the other transaction hasn't committed yet —
+                    // wait a short time and retry (bounded backoff).
+                    usleep(100000 * ($attempt + 1)); // 100ms, 200ms, ...
+                    $attempt++;
+                }
+            }
         }
 
         $queue = config('bird-flock.default_queue', 'default');
@@ -118,4 +174,3 @@ final class BirdFlock
         return $messageId;
     }
 }
-

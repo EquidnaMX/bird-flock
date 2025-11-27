@@ -4,7 +4,7 @@ namespace Equidna\BirdFlock\Tests\Messaging\Senders;
 
 use Equidna\BirdFlock\DTO\FlightPlan;
 use Equidna\BirdFlock\Senders\TwilioWhatsappSender;
-use Equidna\BirdFlock\Tests\Support\FakeTwilioMessageList;
+use Equidna\BirdFlock\Tests\Support\TwilioMessageListFake;
 use PHPUnit\Framework\TestCase;
 use Twilio\Rest\Client;
 
@@ -19,7 +19,7 @@ class TwilioWhatsappSenderTest extends TestCase
             'from' => 'whatsapp:+15005550001',
         ];
 
-        $messagesResource = $this->getMockBuilder(FakeTwilioMessageList::class)
+        $messagesResource = $this->getMockBuilder(TwilioMessageListFake::class)
             ->onlyMethods(['create'])
             ->getMock();
         $messagesResource->expects($this->once())
@@ -87,7 +87,7 @@ class TwilioWhatsappSenderTest extends TestCase
             'from' => 'whatsapp:+15005550001',
         ];
 
-        $messagesResource = $this->getMockBuilder(FakeTwilioMessageList::class)
+        $messagesResource = $this->getMockBuilder(TwilioMessageListFake::class)
             ->onlyMethods(['create'])
             ->getMock();
         $messagesResource->expects($this->once())

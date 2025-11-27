@@ -16,6 +16,15 @@ final class SendTestEmailCommand extends Command
         {--idempotency= : Optional idempotency key}';
 
     protected $description = 'Send a test email via Bird Flock.';
+    /**
+     * Detailed help shown by `php artisan help bird-flock:send-email`.
+     *
+     * Examples:
+     *  php artisan bird-flock:send-email "to@example.com" --text="Plain text body" --html="<p>HTML</p>" --idempotency="order-1234-email"
+     */
+    protected $help = "Send a test email via Bird Flock.\n\n" .
+        "Arguments: to (recipient email).\n" .
+        "Options: --text, --html, --idempotency (stable key to deduplicate).";
 
     public function handle(): int
     {

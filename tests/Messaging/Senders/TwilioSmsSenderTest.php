@@ -4,7 +4,7 @@ namespace Equidna\BirdFlock\Tests\Messaging\Senders;
 
 use Equidna\BirdFlock\DTO\FlightPlan;
 use Equidna\BirdFlock\Senders\TwilioSmsSender;
-use Equidna\BirdFlock\Tests\Support\FakeTwilioMessageList;
+use Equidna\BirdFlock\Tests\Support\TwilioMessageListFake;
 use Exception;
 use PHPUnit\Framework\TestCase;
 use Twilio\Rest\Client;
@@ -20,7 +20,7 @@ class TwilioSmsSenderTest extends TestCase
             'from' => '+15005550001',
         ];
 
-        $messagesResource = $this->getMockBuilder(FakeTwilioMessageList::class)
+        $messagesResource = $this->getMockBuilder(TwilioMessageListFake::class)
             ->onlyMethods(['create'])
             ->getMock();
         $messagesResource->expects($this->once())
@@ -64,7 +64,7 @@ class TwilioSmsSenderTest extends TestCase
             'from' => '+15005550001',
         ];
 
-        $messagesResource = $this->getMockBuilder(FakeTwilioMessageList::class)
+        $messagesResource = $this->getMockBuilder(TwilioMessageListFake::class)
             ->onlyMethods(['create'])
             ->getMock();
         $messagesResource->expects($this->once())
@@ -103,7 +103,7 @@ class TwilioSmsSenderTest extends TestCase
     {
         $exception = new Exception('API Error');
 
-        $messagesResource = $this->getMockBuilder(FakeTwilioMessageList::class)
+        $messagesResource = $this->getMockBuilder(TwilioMessageListFake::class)
             ->onlyMethods(['create'])
             ->getMock();
         $messagesResource->expects($this->once())

@@ -15,6 +15,15 @@ final class SendTestSmsCommand extends Command
 
     protected $description = 'Send a test SMS via Bird Flock.';
 
+    /**
+     * Detailed help shown by `php artisan help bird-flock:send-sms`.
+     *
+     * Examples:
+     *  php artisan bird-flock:send-sms "+14155551234" "Hello world" --idempotency="order-1234-sms"
+     */
+    protected $help = "Send a test SMS message via Bird Flock.\n\n" .
+        "Positional args: to (E.164 recipient), text (optional).\n" .
+        "Options: --idempotency (stable key to deduplicate).";
     public function handle(): int
     {
         $to = $this->argument('to');

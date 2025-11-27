@@ -2,7 +2,7 @@
 
 namespace Equidna\BirdFlock\Tests;
 
-use Equidna\BirdFlock\Tests\Support\FakeResponseFactory;
+use Equidna\BirdFlock\Tests\Support\ResponseFactoryFake;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher as EventsContract;
@@ -39,7 +39,7 @@ abstract class TestCase extends BaseTestCase
 
         $container->instance('config', $repository);
 
-        $responseFactory = new FakeResponseFactory();
+        $responseFactory = new ResponseFactoryFake();
         $container->instance(ResponseFactoryContract::class, $responseFactory);
         $container->instance('Illuminate\Contracts\Routing\ResponseFactory', $responseFactory);
 

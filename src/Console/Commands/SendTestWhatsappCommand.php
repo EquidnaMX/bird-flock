@@ -15,6 +15,15 @@ final class SendTestWhatsappCommand extends Command
         {--idempotency= : Optional idempotency key}';
 
     protected $description = 'Send a test WhatsApp message via Bird Flock.';
+    /**
+     * Detailed help shown by `php artisan help bird-flock:send-whatsapp`.
+     *
+     * Examples:
+     *  php artisan bird-flock:send-whatsapp "+14155551234" "Hello" --media="https://example.com/img.jpg" --idempotency="order-1234-whatsapp"
+     */
+    protected $help = "Send a test WhatsApp message via Bird Flock.\n\n" .
+        "Positional args: to (E.164 recipient), text (optional).\n" .
+        "Options: --media (repeatable), --idempotency (stable key to deduplicate).";
 
     public function handle(): int
     {
