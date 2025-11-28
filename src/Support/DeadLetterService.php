@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Service for managing dead-letter queue entries.
+ *
+ * PHP 8.1+
+ *
+ * @package   Equidna\BirdFlock\Support
+ * @author    Gabriel Ruelas <gruelas@gruelas.com>
+ * @license   https://opensource.org/licenses/MIT MIT License
+ */
+
 namespace Equidna\BirdFlock\Support;
 
 use Equidna\BirdFlock\Contracts\OutboundMessageRepositoryInterface;
@@ -13,9 +23,8 @@ use Illuminate\Support\Str;
 final class DeadLetterService
 {
     public function __construct(
-        private readonly OutboundMessageRepositoryInterface $repository
-    ) {
-    }
+        private readonly OutboundMessageRepositoryInterface $repository,
+    ) {}
 
     public function record(
         string $messageId,
@@ -48,6 +57,11 @@ final class DeadLetterService
     {
         $payload = FlightPlan::fromArray($entry->payload ?? []);
 
+        // Enhance idempotency: append ULID suffix to prevent timestamp collisions
+        $replayKey = $payload->idempotencyKey
+            ? $payload->idempotencyKey . ':replay:' . (string) Str::ulid()
+            : null;
+
         $this->repository->resetForRetry(
             $entry->message_id,
             [
@@ -55,10 +69,24 @@ final class DeadLetterService
                 'subject' => $payload->subject,
                 'templateKey' => $payload->templateKey,
                 'payload' => $payload->toArray(),
+                'idempotencyKey' => $replayKey,
             ]
         );
 
-        DispatchMessageJob::dispatch($entry->message_id, $payload)
+        $replayPayload = new FlightPlan(
+            channel: $payload->channel,
+            to: $payload->to,
+            subject: $payload->subject,
+            text: $payload->text,
+            html: $payload->html,
+            templateKey: $payload->templateKey,
+            templateData: $payload->templateData,
+            mediaUrls: $payload->mediaUrls,
+            metadata: $payload->metadata,
+            idempotencyKey: $replayKey,
+        );
+
+        DispatchMessageJob::dispatch($entry->message_id, $replayPayload)
             ->onQueue(config('bird-flock.default_queue', 'default'));
 
         $entry->delete();

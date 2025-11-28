@@ -25,11 +25,15 @@ return new class extends Migration {
             $table->string('subject', 255)->nullable();
             $table->string('templateKey', 128)->nullable();
             $table->json('payload');
-            $table->enum('status', ['queued', 'sending', 'sent', 'delivered', 'failed', 'undeliverable'])->default('queued');
+            $table->enum(
+                'status',
+                ['queued', 'sending', 'sent', 'delivered', 'failed', 'undeliverable']
+            )->default('queued');
             $table->string('providerMessageId', 128)->nullable();
             $table->string('errorCode', 64)->nullable();
             $table->string('errorMessage', 1024)->nullable();
             $table->unsignedInteger('attempts')->default(0);
+            $table->unsignedInteger('totalAttempts')->default(0);
             $table->string('idempotencyKey', 128)->nullable();
             $table->timestamp('queuedAt')->nullable();
             $table->timestamp('sentAt')->nullable();
@@ -39,7 +43,7 @@ return new class extends Migration {
             $table->timestamp('updatedAt')->useCurrent()->useCurrentOnUpdate();
 
             $table->unique('idempotencyKey', 'uniq_idempotencyKey');
-            $table->index('providerMessageId', 'idx_providerMessageId');
+            $table->index(['providerMessageId', 'status'], 'idx_provider_status');
             $table->index(['channel', 'status'], 'idx_channel_status');
         });
     }

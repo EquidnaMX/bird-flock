@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Structured logging helper for Bird Flock package.
+ *
+ * PHP 8.1+
+ *
+ * @package   Equidna\BirdFlock\Support
+ * @author    Gabriel Ruelas <gruelas@gruelas.com>
+ * @license   https://opensource.org/licenses/MIT MIT License
+ */
+
 namespace Equidna\BirdFlock\Support;
 
 use Psr\Log\LoggerInterface;
@@ -30,6 +40,13 @@ final class Logger
         return app('bird-flock.logger');
     }
 
+    /**
+     * Log an informational message.
+     *
+     * @param  string               $message Message to log.
+     * @param  array<string, mixed> $context Additional context data.
+     * @return void
+     */
     public static function info(string $message, array $context = []): void
     {
         if (!self::enabled()) {
@@ -39,6 +56,13 @@ final class Logger
         self::channel()->info($message, $context);
     }
 
+    /**
+     * Log a warning message.
+     *
+     * @param  string               $message Message to log.
+     * @param  array<string, mixed> $context Additional context data.
+     * @return void
+     */
     public static function warning(string $message, array $context = []): void
     {
         if (!self::enabled()) {
@@ -48,6 +72,13 @@ final class Logger
         self::channel()->warning($message, $context);
     }
 
+    /**
+     * Log an error message.
+     *
+     * @param  string               $message Message to log.
+     * @param  array<string, mixed> $context Additional context data.
+     * @return void
+     */
     public static function error(string $message, array $context = []): void
     {
         if (!self::enabled()) {

@@ -115,6 +115,11 @@ $container->instance('events', $events);
 $container->instance(EventsContract::class, $events);
 Event::setFacadeApplication($container);
 
+// Bind a simple in-memory cache for testing (ArrayStore).
+$cache = new \Illuminate\Cache\ArrayStore();
+$container->instance('cache', $cache);
+$container->instance('cache.store', $cache);
+
 // Ensure a simple `response()` helper exists for tests when not provided by
 // framework helpers. Use the real Illuminate Response when available.
 if (! function_exists('response')) {

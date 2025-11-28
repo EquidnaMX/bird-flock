@@ -9,6 +9,7 @@ use Equidna\BirdFlock\Events\MessageRetryScheduled;
 use Equidna\BirdFlock\BirdFlock;
 use Equidna\BirdFlock\Tests\TestCase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Carbon;
 
 class BirdFlockTest extends TestCase
 {
@@ -151,9 +152,45 @@ class BirdFlockTest extends TestCase
         $this->assertCount(0, $retries);
         $dispatcher->forget(MessageRetryScheduled::class);
     }
+
+    public function testDispatchBatchCreatesMultipleMessages(): void
+    {
+        $this->markTestSkipped('Batch dispatch requires DB facade which is not available in unit tests');
+    }
+
+    public function testDispatchWithSendAtSchedulesDelayedJob(): void
+    {
+        $dispatcher = app('events');
+        $queued = [];
+        $dispatcher->listen(MessageQueued::class, function ($event) use (&$queued) {
+            $queued[] = $event;
+        });
+
+        $repository = $this->createMock(OutboundMessageRepositoryInterface::class);
+        $repository->expects($this->once())
+            ->method('create')
+            ->willReturnCallback(function ($data) {
+                return $data['id_outboundMessage'];
+            });
+
+        $sendAt = Carbon::now()->addHours(2);
+        $payload = new FlightPlan(
+            channel: 'sms',
+            to: '+15005550006',
+            text: 'Scheduled message',
+            sendAt: $sendAt,
+        );
+
+        $messageId = BirdFlock::dispatch($payload, $repository);
+
+        $this->assertNotEmpty($messageId);
+        $this->assertCount(1, $queued);
+        $this->assertEquals($sendAt->format('Y-m-d\TH:i:s\Z'), $queued[0]->payload->sendAt->format('Y-m-d\TH:i:s\Z'));
+        $dispatcher->forget(MessageQueued::class);
+    }
+
+    public function testDispatchBatchWithMixedScheduledAndImmediate(): void
+    {
+        $this->markTestSkipped('Batch dispatch requires DB facade which is not available in unit tests');
+    }
 }
-
-
-
-
-

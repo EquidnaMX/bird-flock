@@ -30,6 +30,7 @@ final class FlightPlan
      * @param array<string>        $mediaUrls       Media attachment URLs
      * @param array<string, mixed> $metadata        Additional metadata
      * @param string|null          $idempotencyKey  Unique key for idempotent operations
+     * @param \DateTimeInterface|null $sendAt       Scheduled send time (null for immediate)
      */
     public function __construct(
         public readonly string $channel,
@@ -42,6 +43,7 @@ final class FlightPlan
         public readonly array $mediaUrls = [],
         public readonly array $metadata = [],
         public readonly ?string $idempotencyKey = null,
+        public readonly ?\DateTimeInterface $sendAt = null,
     ) {
         //
     }
@@ -55,6 +57,13 @@ final class FlightPlan
      */
     public static function fromArray(array $data): self
     {
+        $sendAt = null;
+        if (isset($data['send_at'])) {
+            $sendAt = is_string($data['send_at'])
+                ? new \DateTimeImmutable($data['send_at'])
+                : $data['send_at'];
+        }
+
         return new self(
             channel: $data['channel'] ?? '',
             to: $data['to'] ?? '',
@@ -66,6 +75,7 @@ final class FlightPlan
             mediaUrls: $data['media_urls'] ?? [],
             metadata: $data['metadata'] ?? [],
             idempotencyKey: $data['idempotency_key'] ?? null,
+            sendAt: $sendAt,
         );
     }
 
@@ -87,6 +97,7 @@ final class FlightPlan
             'media_urls'      => $this->mediaUrls,
             'metadata'        => $this->metadata,
             'idempotency_key' => $this->idempotencyKey,
+            'send_at'         => $this->sendAt?->format('Y-m-d\TH:i:s\Z'),
         ];
     }
 }

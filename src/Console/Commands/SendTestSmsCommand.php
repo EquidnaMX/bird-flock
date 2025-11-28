@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Artisan command for sending test SMS messages.
+ *
+ * PHP 8.1+
+ *
+ * @package   Equidna\BirdFlock\Console\Commands
+ * @author    Gabriel Ruelas <gruelas@gruelas.com>
+ * @license   https://opensource.org/licenses/MIT MIT License
+ */
+
 namespace Equidna\BirdFlock\Console\Commands;
 
 use Illuminate\Console\Command;

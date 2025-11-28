@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Base test case for Bird Flock unit tests.
+ *
+ * PHP 8.1+
+ *
+ * @package   Equidna\BirdFlock\Tests
+ * @author    Gabriel Ruelas <gruelas@gruelas.com>
+ * @license   https://opensource.org/licenses/MIT MIT License
+ */
+
 namespace Equidna\BirdFlock\Tests;
 
 use Equidna\BirdFlock\Tests\Support\ResponseFactoryFake;

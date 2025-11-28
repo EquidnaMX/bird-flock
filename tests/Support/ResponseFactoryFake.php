@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Fake HTTP response factory for testing.
+ *
+ * PHP 8.1+
+ *
+ * @package   Equidna\BirdFlock\Tests\Support
+ * @author    Gabriel Ruelas <gruelas@gruelas.com>
+ * @license   https://opensource.org/licenses/MIT MIT License
+ */
+
 namespace Equidna\BirdFlock\Tests\Support;
 
 use BadMethodCallException;

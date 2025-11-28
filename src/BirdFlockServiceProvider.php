@@ -1,20 +1,30 @@
 <?php
 
+/**
+ * Service provider for Bird Flock package registration and bootstrapping.
+ *
+ * PHP 8.1+
+ *
+ * @package   Equidna\BirdFlock
+ * @author    Gabriel Ruelas <gruelas@gruelas.com>
+ * @license   https://opensource.org/licenses/MIT MIT License
+ */
+
 namespace Equidna\BirdFlock;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
-use Equidna\BirdFlock\Contracts\OutboundMessageRepositoryInterface;
-use Equidna\BirdFlock\Repositories\EloquentOutboundMessageRepository;
-use Equidna\BirdFlock\Console\Commands\DeadLetterCommand;
-use Equidna\BirdFlock\Console\Commands\SendTestSmsCommand;
-use Equidna\BirdFlock\Console\Commands\SendTestWhatsappCommand;
-use Equidna\BirdFlock\Console\Commands\SendTestEmailCommand;
-use Equidna\BirdFlock\Support\Logger as BirdFlockLogger;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use SendGrid;
 use Twilio\Rest\Client as TwilioClient;
+use Equidna\BirdFlock\Console\Commands\DeadLetterCommand;
+use Equidna\BirdFlock\Console\Commands\SendTestEmailCommand;
+use Equidna\BirdFlock\Console\Commands\SendTestSmsCommand;
+use Equidna\BirdFlock\Console\Commands\SendTestWhatsappCommand;
+use Equidna\BirdFlock\Contracts\OutboundMessageRepositoryInterface;
+use Equidna\BirdFlock\Repositories\EloquentOutboundMessageRepository;
+use Equidna\BirdFlock\Support\ConfigValidator;
 use RuntimeException;
 
 class BirdFlockServiceProvider extends ServiceProvider
@@ -39,7 +49,18 @@ class BirdFlockServiceProvider extends ServiceProvider
                     throw new RuntimeException('Bird Flock Twilio credentials are not configured.');
                 }
 
-                return new TwilioClient($accountSid, $authToken);
+                // Configure HTTP timeouts via CurlClient options
+                $timeout = config('bird-flock.twilio.timeout', 30);
+                $connectTimeout = config('bird-flock.twilio.connect_timeout', 10);
+
+                $httpClient = new \Twilio\Http\CurlClient([
+                    CURLOPT_TIMEOUT => $timeout,
+                    CURLOPT_CONNECTTIMEOUT => $connectTimeout,
+                ]);
+
+                $client = new TwilioClient($accountSid, $authToken, null, null, $httpClient);
+
+                return $client;
             }
         );
 
@@ -52,8 +73,58 @@ class BirdFlockServiceProvider extends ServiceProvider
                     throw new RuntimeException('Bird Flock SendGrid API key is not configured.');
                 }
 
-                return new SendGrid($apiKey);
+                $client = new SendGrid($apiKey);
+
+                // Configure HTTP timeouts
+                $timeout = config('bird-flock.sendgrid.timeout', 30);
+                $connectTimeout = config('bird-flock.sendgrid.connect_timeout', 10);
+
+                $client->client->setCurlOptions([
+                    CURLOPT_TIMEOUT => $timeout,
+                    CURLOPT_CONNECTTIMEOUT => $connectTimeout,
+                ]);
+
+                return $client;
             }
+        );
+
+        $this->app->singleton(
+            \Vonage\Client::class,
+            function (): \Vonage\Client {
+                $apiKey = config('bird-flock.vonage.api_key');
+                $apiSecret = config('bird-flock.vonage.api_secret');
+
+                if (!$apiKey || !$apiSecret) {
+                    throw new RuntimeException('Bird Flock Vonage credentials are not configured.');
+                }
+
+                $credentials = new \Vonage\Client\Credentials\Basic($apiKey, $apiSecret);
+                $client = new \Vonage\Client($credentials);
+
+                return $client;
+            }
+        );
+
+        $this->app->singleton(
+            \Mailgun\Mailgun::class,
+            function (): \Mailgun\Mailgun {
+                $apiKey = config('bird-flock.mailgun.api_key');
+
+                if (!$apiKey) {
+                    throw new RuntimeException('Bird Flock Mailgun API key is not configured.');
+                }
+
+                $endpoint = config('bird-flock.mailgun.endpoint', 'api.mailgun.net');
+                $client = \Mailgun\Mailgun::create($apiKey, $endpoint);
+
+                return $client;
+            }
+        );
+
+        // Bind metrics collector implementation (default no-op logger-backed).
+        $this->app->bind(
+            \Equidna\BirdFlock\Contracts\MetricsCollectorInterface::class,
+            \Equidna\BirdFlock\Support\MetricsCollector::class
         );
     }
 
@@ -61,8 +132,16 @@ class BirdFlockServiceProvider extends ServiceProvider
     {
         $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
-        $this->ensureTwilioConfiguration();
-        $this->ensureSendgridConfiguration();
+
+        // Run centralized config validation. Throwing validations will
+        // surface during application boot; non-fatal issues are logged.
+        try {
+            (new ConfigValidator())->validateAll();
+        } catch (\Throwable $e) {
+            // Rethrow so consuming applications fail-fast on fatal config errors
+            throw $e;
+        }
+
         $this->registerCommands();
 
         $this->publishes([
@@ -72,46 +151,6 @@ class BirdFlockServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__ . '/../database/migrations' => database_path('migrations/bird-flock'),
         ], 'bird-flock-migrations');
-    }
-
-    /**
-     * Ensure SendGrid webhook signing is configured correctly.
-     */
-    private function ensureSendgridConfiguration(): void
-    {
-        $requireSigned = config('bird-flock.sendgrid.require_signed_webhooks');
-        $publicKey     = config('bird-flock.sendgrid.webhook_public_key');
-
-        if ($requireSigned && !$publicKey) {
-            throw new \RuntimeException(
-                'Bird Flock requires SENDGRID_WEBHOOK_PUBLIC_KEY when signed SendGrid webhooks are enabled.'
-            );
-        }
-
-        if (!$requireSigned && !$publicKey) {
-            BirdFlockLogger::info('bird-flock.sendgrid.webhook_signing_disabled');
-        }
-    }
-
-    /**
-     * Ensure Twilio configuration is valid.
-     */
-    private function ensureTwilioConfiguration(): void
-    {
-        $accountSid = config('bird-flock.twilio.account_sid');
-        $authToken = config('bird-flock.twilio.auth_token');
-
-        if (!$accountSid || !$authToken) {
-            throw new RuntimeException('Bird Flock requires TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN to be configured.');
-        }
-
-        if (!config('bird-flock.twilio.messaging_service_sid') && !config('bird-flock.twilio.from_sms')) {
-            BirdFlockLogger::warning('bird-flock.twilio.sms_sender_not_configured');
-        }
-
-        if (!config('bird-flock.twilio.from_whatsapp')) {
-            BirdFlockLogger::warning('bird-flock.twilio.whatsapp_sender_missing');
-        }
     }
 
     /**
@@ -143,6 +182,8 @@ class BirdFlockServiceProvider extends ServiceProvider
                 SendTestSmsCommand::class,
                 SendTestWhatsappCommand::class,
                 SendTestEmailCommand::class,
+                \Equidna\BirdFlock\Console\Commands\ConfigValidateCommand::class,
+                \Equidna\BirdFlock\Console\Commands\DeadLetterStatsCommand::class,
             ]);
         }
     }

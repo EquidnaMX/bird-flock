@@ -50,8 +50,17 @@ final class TwilioWebhookController extends Controller
             return $response;
         }
 
+        // Basic input validation (strict types ensure safety)
         $messageSid = $request->input('MessageSid');
         $messageStatus = $request->input('MessageStatus');
+
+        if (!is_string($messageSid) || !is_string($messageStatus)) {
+            Logger::warning('bird-flock.webhook.twilio.invalid_input', [
+                'message_sid' => $messageSid,
+                'message_status' => $messageStatus,
+            ]);
+            return response('Invalid input', 400);
+        }
 
         $status = $this->mapTwilioStatus($messageStatus);
 

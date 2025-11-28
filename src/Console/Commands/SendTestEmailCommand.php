@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Artisan command for sending test email messages.
+ *
+ * PHP 8.1+
+ *
+ * @package   Equidna\BirdFlock\Console\Commands
+ * @author    Gabriel Ruelas <gruelas@gruelas.com>
+ * @license   https://opensource.org/licenses/MIT MIT License
+ */
+
 namespace Equidna\BirdFlock\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -20,7 +30,8 @@ final class SendTestEmailCommand extends Command
      * Detailed help shown by `php artisan help bird-flock:send-email`.
      *
      * Examples:
-     *  php artisan bird-flock:send-email "to@example.com" --text="Plain text body" --html="<p>HTML</p>" --idempotency="order-1234-email"
+     *  php artisan bird-flock:send-email "to@example.com" --text="Plain text body"
+     *      --html="<p>HTML</p>" --idempotency="order-1234-email"
      */
     protected $help = "Send a test email via Bird Flock.\n\n" .
         "Arguments: to (recipient email).\n" .

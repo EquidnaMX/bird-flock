@@ -14,6 +14,7 @@ namespace Equidna\BirdFlock\Repositories;
 
 use Equidna\BirdFlock\Contracts\OutboundMessageRepositoryInterface;
 use Equidna\BirdFlock\Models\OutboundMessage;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Eloquent-based repository for outbound messages.
@@ -48,39 +49,42 @@ final class EloquentOutboundMessageRepository implements OutboundMessageReposito
         string $status,
         ?array $meta = null
     ): void {
-        $message = OutboundMessage::where('providerMessageId', $id)
-            ->orWhere('id_outboundMessage', $id)
-            ->first();
+        DB::transaction(function () use ($id, $status, $meta) {
+            $message = OutboundMessage::where('providerMessageId', $id)
+                ->orWhere('id_outboundMessage', $id)
+                ->lockForUpdate()
+                ->first();
 
-        if (!$message) {
-            return;
-        }
-
-        $updateData = ['status' => $status];
-
-        if ($status === 'sent') {
-            $updateData['sentAt'] = now();
-        } elseif ($status === 'delivered') {
-            $updateData['deliveredAt'] = now();
-        } elseif ($status === 'failed') {
-            $updateData['failedAt'] = now();
-        }
-
-        if ($meta) {
-            if (isset($meta['provider_message_id'])) {
-                $updateData['providerMessageId'] = $meta['provider_message_id'];
+            if (!$message) {
+                return;
             }
 
-            if (isset($meta['error_code'])) {
-                $updateData['errorCode'] = $meta['error_code'];
+            $updateData = ['status' => $status];
+
+            if ($status === 'sent') {
+                $updateData['sentAt'] = now();
+            } elseif ($status === 'delivered') {
+                $updateData['deliveredAt'] = now();
+            } elseif ($status === 'failed') {
+                $updateData['failedAt'] = now();
             }
 
-            if (isset($meta['error_message'])) {
-                $updateData['errorMessage'] = $meta['error_message'];
-            }
-        }
+            if ($meta) {
+                if (isset($meta['provider_message_id'])) {
+                    $updateData['providerMessageId'] = $meta['provider_message_id'];
+                }
 
-        $message->update($updateData);
+                if (isset($meta['error_code'])) {
+                    $updateData['errorCode'] = $meta['error_code'];
+                }
+
+                if (isset($meta['error_message'])) {
+                    $updateData['errorMessage'] = $meta['error_message'];
+                }
+            }
+
+            $message->update($updateData);
+        });
     }
 
     /**
@@ -110,24 +114,28 @@ final class EloquentOutboundMessageRepository implements OutboundMessageReposito
      */
     public function resetForRetry(string $id, array $data): void
     {
-        $message = OutboundMessage::where('id_outboundMessage', $id)->first();
+        DB::transaction(function () use ($id, $data) {
+            $message = OutboundMessage::where('id_outboundMessage', $id)
+                ->lockForUpdate()
+                ->first();
 
-        if (!$message) {
-            return;
-        }
+            if (!$message) {
+                return;
+            }
 
-        $defaults = [
-            'status' => 'queued',
-            'queuedAt' => now(),
-            'sentAt' => null,
-            'deliveredAt' => null,
-            'failedAt' => null,
-            'providerMessageId' => null,
-            'errorCode' => null,
-            'errorMessage' => null,
-            'attempts' => 0,
-        ];
+            $defaults = [
+                'status' => 'queued',
+                'queuedAt' => now(),
+                'sentAt' => null,
+                'deliveredAt' => null,
+                'failedAt' => null,
+                'providerMessageId' => null,
+                'errorCode' => null,
+                'errorMessage' => null,
+                'attempts' => 0,
+            ];
 
-        $message->update(array_merge($defaults, $data));
+            $message->update(array_merge($defaults, $data));
+        });
     }
 }

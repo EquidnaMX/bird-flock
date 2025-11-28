@@ -74,7 +74,6 @@ final class MessageFactory
         return new TwilioWhatsappSender(
             client: $client,
             from: config('bird-flock.twilio.from_whatsapp'),
-            sandboxMode: config('bird-flock.twilio.sandbox_mode', false),
             statusCallback: config('bird-flock.twilio.status_webhook_url'),
         );
     }

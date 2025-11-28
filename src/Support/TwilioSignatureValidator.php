@@ -36,6 +36,10 @@ final class TwilioSignatureValidator
         $signature = $request->header('X-Twilio-Signature');
 
         if (!$signature) {
+            Logger::warning('bird-flock.webhook.twilio.signature_missing', [
+                'url' => $url,
+                'ip' => $request->ip(),
+            ]);
             return false;
         }
 
@@ -50,6 +54,15 @@ final class TwilioSignatureValidator
 
         $computed = base64_encode(hash_hmac('sha1', $data, $authToken, true));
 
-        return hash_equals($computed, $signature);
+        $isValid = hash_equals($computed, $signature);
+
+        if (!$isValid) {
+            Logger::warning('bird-flock.webhook.twilio.signature_invalid', [
+                'url' => $url,
+                'ip' => $request->ip(),
+            ]);
+        }
+
+        return $isValid;
     }
 }

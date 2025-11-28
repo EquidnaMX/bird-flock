@@ -1,6 +1,16 @@
 <?php
 
-declare(strict_types=1);
+/**
+ * Unit tests for BirdFlock dispatch with DB race conditions.
+ *
+ * PHP 8.1+
+ *
+ * @package   Equidna\BirdFlock\Tests\Unit
+ * @author    Gabriel Ruelas <gruelas@gruelas.com>
+ * @license   https://opensource.org/licenses/MIT MIT License
+ */
+
+namespace Equidna\BirdFlock\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Equidna\BirdFlock\BirdFlock;
@@ -10,8 +20,10 @@ use Illuminate\Database\QueryException;
 
 final class BirdFlockDispatchTest extends TestCase
 {
-    private function makeQueryException(string $message = 'unique constraint', array $errorInfo = ['23000', 1062, 'Duplicate entry']): QueryException
-    {
+    private function makeQueryException(
+        string $message = 'unique constraint',
+        array $errorInfo = ['23000', 1062, 'Duplicate entry'],
+    ): QueryException {
         $pdoEx = new \PDOException($message, (int) ($errorInfo[1] ?? 0));
         $ex = new QueryException('default', 'insert into outbound_messages', [], $pdoEx);
 
@@ -23,7 +35,7 @@ final class BirdFlockDispatchTest extends TestCase
         return $ex;
     }
 
-    public function test_returns_existing_id_when_create_throws_unique_and_find_returns_existing(): void
+    public function testReturnsExistingIdWhenCreateThrowsUniqueAndFindReturnsExisting(): void
     {
         $repo = $this->createMock(OutboundMessageRepositoryInterface::class);
 
@@ -47,7 +59,7 @@ final class BirdFlockDispatchTest extends TestCase
         $this->assertSame('01FZEXAMPLE', $result);
     }
 
-    public function test_retries_and_succeeds_when_create_transiently_fails_then_succeeds(): void
+    public function testRetriesAndSucceedsWhenCreateTransientlyFailsThenSucceeds(): void
     {
         $repo = $this->createMock(OutboundMessageRepositoryInterface::class);
 

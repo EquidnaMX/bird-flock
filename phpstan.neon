@@ -1,0 +1,10 @@
+parameters:
+    level: 6
+    paths:
+        - src
+    excludePaths:
+        - vendor
+    treatPhpDocTypesAsCertain: false
+    ignoreErrors:
+        # Allow dynamic properties in tests
+        - '#Access to an undefined property#'

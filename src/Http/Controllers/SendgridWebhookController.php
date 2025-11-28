@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Event;
+// Equidna Toolkit response helpers can be used when available.
 use Equidna\BirdFlock\Contracts\OutboundMessageRepositoryInterface;
 use Equidna\BirdFlock\Events\WebhookReceived;
 use Equidna\BirdFlock\Support\SendgridSignatureValidator;

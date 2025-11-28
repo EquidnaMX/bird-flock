@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Artisan command for managing dead-letter queue entries.
+ *
+ * PHP 8.1+
+ *
+ * @package   Equidna\BirdFlock\Console\Commands
+ * @author    Gabriel Ruelas <gruelas@gruelas.com>
+ * @license   https://opensource.org/licenses/MIT MIT License
+ */
+
 namespace Equidna\BirdFlock\Console\Commands;
 
 use Equidna\BirdFlock\Models\DeadLetterEntry;

@@ -16,6 +16,10 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Represents an outbound message in the messaging system.
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder where(mixed ...$args)
+ * @method static static|null find(string $id)
+ * @method static static create(array $attributes)
  */
 class OutboundMessage extends Model
 {
@@ -23,7 +27,26 @@ class OutboundMessage extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'id_outboundMessage',
+        'channel',
+        'to',
+        'from',
+        'subject',
+        'templateKey',
+        'payload',
+        'status',
+        'providerMessageId',
+        'errorCode',
+        'errorMessage',
+        'attempts',
+        'totalAttempts',
+        'idempotencyKey',
+        'queuedAt',
+        'sentAt',
+        'deliveredAt',
+        'failedAt',
+    ];
 
     public const CREATED_AT = 'createdAt';
     public const UPDATED_AT = 'updatedAt';

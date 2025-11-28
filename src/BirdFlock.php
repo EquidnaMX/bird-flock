@@ -12,15 +12,21 @@
 
 namespace Equidna\BirdFlock;
 
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
+use Equidna\BirdFlock\Contracts\MetricsCollectorInterface;
 use Equidna\BirdFlock\Contracts\OutboundMessageRepositoryInterface;
 use Equidna\BirdFlock\DTO\FlightPlan;
-use Equidna\BirdFlock\Jobs\DispatchMessageJob;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Database\QueryException;
-use Equidna\BirdFlock\Support\Logger;
+use Equidna\BirdFlock\Events\MessageCreateConflict;
+use Equidna\BirdFlock\Events\MessageDuplicateSkipped;
 use Equidna\BirdFlock\Events\MessageQueued;
 use Equidna\BirdFlock\Events\MessageRetryScheduled;
+use Equidna\BirdFlock\Jobs\DispatchMessageJob;
+use Equidna\BirdFlock\Support\Logger;
+use Equidna\BirdFlock\Support\Masking;
+use Equidna\BirdFlock\Support\MetricsCollector;
 
 /**
  * Orchestrates message dispatching with idempotency and routing.
@@ -30,10 +36,10 @@ final class BirdFlock
     /**
      * Dispatch a message for sending.
      *
-     * @param FlightPlan                             $payload     Message payload
-     * @param OutboundMessageRepositoryInterface|null    $repository Optional repository (useful for tests)
-     *
-     * @return string Message identifier
+     * @param  FlightPlan                             $payload     Message payload.
+     * @param  OutboundMessageRepositoryInterface|null $repository Optional repository (useful for tests).
+     * @return string                                              Message identifier.
+     * @throws \RuntimeException                                   When payload exceeds maximum size.
      */
     public static function dispatch(
         FlightPlan $payload,
@@ -41,10 +47,25 @@ final class BirdFlock
     ): string {
         $repository ??= app(OutboundMessageRepositoryInterface::class);
 
+        // Validate payload size to prevent queue backend issues
+        $maxSize = config('bird-flock.max_payload_size', 262144);
+        $payloadJson = json_encode($payload->toArray());
+
+        if (strlen($payloadJson) > $maxSize) {
+            Logger::error('bird-flock.dispatch.payload_too_large', [
+                'size' => strlen($payloadJson),
+                'max' => $maxSize,
+                'idempotency_key' => $payload->idempotencyKey,
+                'channel' => $payload->channel,
+            ]);
+
+            throw new \RuntimeException("Payload exceeds maximum size of {$maxSize} bytes");
+        }
+
         Logger::info('bird-flock.dispatch.received', [
             'channel' => $payload->channel,
             'idempotency_key' => $payload->idempotencyKey,
-            'to' => $payload->to,
+            'to' => Masking::maskPhone($payload->to),
         ]);
 
         $messageId = (string) Str::ulid();
@@ -60,6 +81,29 @@ final class BirdFlock
                         'status' => $existing['status'],
                         'channel' => $payload->channel,
                     ]);
+
+                    // Emit event and metrics hook for duplicate skips
+                    Event::dispatch(new MessageDuplicateSkipped(
+                        existingMessageId: $existing['id_outboundMessage'],
+                        idempotencyKey: $payload->idempotencyKey ?? '',
+                        channel: $payload->channel,
+                        payload: $payload
+                    ));
+
+                    try {
+                        app(MetricsCollectorInterface::class)->increment('bird_flock.duplicate_skipped', 1, [
+                            'channel' => $payload->channel,
+                        ]);
+                    } catch (\Throwable $e) {
+                        Logger::warning('bird-flock.metrics.fallback', [
+                            'metric' => 'duplicate_skipped',
+                            'error' => $e->getMessage(),
+                        ]);
+                        (new MetricsCollector())->increment('bird_flock.duplicate_skipped', 1, [
+                            'channel' => $payload->channel,
+                        ]);
+                    }
+
                     return $existing['id_outboundMessage'];
                 }
 
@@ -90,33 +134,28 @@ final class BirdFlock
         }
 
         if ($shouldCreate) {
-            // Make create DB-race safe: handle concurrent inserts that violate
-            // the unique index on `idempotencyKey` (migration index `uniq_idempotencyKey`).
-            $maxAttempts = 3;
-            $attempt = 0;
+            // Use single-attempt insert with atomic conflict resolution
+            try {
+                $data = [
+                    'id_outboundMessage' => $messageId,
+                    'channel' => $payload->channel,
+                    'to' => $payload->to,
+                    'subject' => $payload->subject,
+                    'templateKey' => $payload->templateKey,
+                    'payload' => $payload->toArray(),
+                    'status' => 'queued',
+                    'idempotencyKey' => $payload->idempotencyKey,
+                    'queuedAt' => now(),
+                ];
 
-            while ($attempt < $maxAttempts) {
+                // Attempt insert; on conflict, retrieve existing ID
                 try {
-                    $repository->create([
-                        'id_outboundMessage' => $messageId,
-                        'channel' => $payload->channel,
-                        'to' => $payload->to,
-                        'subject' => $payload->subject,
-                        'templateKey' => $payload->templateKey,
-                        'payload' => $payload->toArray(),
-                        'status' => 'queued',
-                        'idempotencyKey' => $payload->idempotencyKey,
-                        'queuedAt' => now(),
-                    ]);
-
-                    // Created successfully
-                    break;
+                    $repository->create($data);
                 } catch (QueryException $e) {
-                    // Detect unique-constraint errors across common drivers.
+                    // Detect unique-constraint errors across common drivers
                     $sqlState = $e->errorInfo[0] ?? null;
                     $driverCode = $e->errorInfo[1] ?? null;
 
-                    // Normalize common SQL error indicators to a single, readable predicate.
                     $pgUniqueStates = ['23505'];
                     $integrityStates = ['23000', '19'];
                     $isPostgresUnique = in_array($sqlState, $pgUniqueStates, true);
@@ -133,8 +172,7 @@ final class BirdFlock
                         throw $e; // unknown DB error, rethrow
                     }
 
-                    // Another process inserted the same idempotency key. Re-query to get
-                    // the existing message id and return that value instead of failing.
+                    // Conflict detected: retrieve the existing message
                     if ($payload->idempotencyKey) {
                         $existing = $repository->findByIdempotencyKey($payload->idempotencyKey);
                         if ($existing) {
@@ -144,17 +182,38 @@ final class BirdFlock
                                 'idempotency_key' => $payload->idempotencyKey,
                             ]);
 
+                            Event::dispatch(new MessageCreateConflict(
+                                existingMessageId: $existing['id_outboundMessage'],
+                                idempotencyKey: $payload->idempotencyKey ?? '',
+                                channel: $payload->channel,
+                                payload: $payload
+                            ));
+
+                            try {
+                                app(MetricsCollectorInterface::class)->increment('bird_flock.create_conflict', 1, [
+                                    'channel' => $payload->channel,
+                                ]);
+                            } catch (\Throwable $e) {
+                                Logger::warning('bird-flock.metrics.fallback', [
+                                    'metric' => 'create_conflict',
+                                    'error' => $e->getMessage(),
+                                ]);
+                                (new MetricsCollector())->increment('bird_flock.create_conflict', 1, [
+                                    'channel' => $payload->channel,
+                                ]);
+                            }
+
                             $messageId = $existing['id_outboundMessage'];
                             $shouldCreate = false;
-                            break;
                         }
                     }
-
-                    // If we reach here, the other transaction hasn't committed yet —
-                    // wait a short time and retry (bounded backoff).
-                    usleep(100000 * ($attempt + 1)); // 100ms, 200ms, ...
-                    $attempt++;
                 }
+            } catch (\Throwable $e) {
+                Logger::error('bird-flock.dispatch.create_failed', [
+                    'message' => $e->getMessage(),
+                    'channel' => $payload->channel,
+                ]);
+                throw $e;
             }
         }
 
@@ -164,13 +223,129 @@ final class BirdFlock
             'message_id' => $messageId,
             'queue' => $queue,
             'channel' => $payload->channel,
+            'scheduled' => $payload->sendAt !== null,
         ]);
 
         Event::dispatch(new MessageQueued($messageId, $payload));
 
-        DispatchMessageJob::dispatch($messageId, $payload)
+        $job = DispatchMessageJob::dispatch($messageId, $payload)
             ->onQueue($queue);
 
+        // Delay job if sendAt is in the future
+        if ($payload->sendAt) {
+            $sendAtCarbon = \Illuminate\Support\Carbon::instance($payload->sendAt);
+            if ($sendAtCarbon->isFuture()) {
+                $delay = max(0, $sendAtCarbon->getTimestamp() - now()->getTimestamp());
+                $job->delay($delay);
+
+                Logger::info('bird-flock.dispatch.scheduled', [
+                    'message_id' => $messageId,
+                    'send_at' => $payload->sendAt->format('Y-m-d\TH:i:s\Z'),
+                    'delay_seconds' => $delay,
+                ]);
+            }
+        }
+
         return $messageId;
+    }
+
+    /**
+     * Dispatch multiple messages in a single atomic operation.
+     *
+     * @param  FlightPlan[]                            $payloads    Array of message payloads.
+     * @param  OutboundMessageRepositoryInterface|null $repository  Optional repository.
+     * @return array<string>                                        Array of message identifiers.
+     * @throws \InvalidArgumentException                            When payloads contain non-FlightPlan instances.
+     * @throws \RuntimeException                                    When payload exceeds maximum size.
+     */
+    public static function dispatchBatch(
+        array $payloads,
+        ?OutboundMessageRepositoryInterface $repository = null
+    ): array {
+        if (empty($payloads)) {
+            return [];
+        }
+
+        $repository ??= app(OutboundMessageRepositoryInterface::class);
+        $messageIds = [];
+        $dataToInsert = [];
+        $maxSize = config('bird-flock.max_payload_size', 262144);
+
+        Logger::info('bird-flock.batch.received', [
+            'count' => count($payloads),
+        ]);
+
+        // Prepare all messages
+        foreach ($payloads as $payload) {
+            if (! $payload instanceof FlightPlan) {
+                throw new \InvalidArgumentException('All payloads must be FlightPlan instances');
+            }
+
+            $payloadJson = json_encode($payload->toArray());
+            if (strlen($payloadJson) > $maxSize) {
+                throw new \RuntimeException("Payload exceeds maximum size of {$maxSize} bytes");
+            }
+
+            $messageId = (string) Str::ulid();
+            $messageIds[] = $messageId;
+
+            $dataToInsert[] = [
+                'id_outboundMessage' => $messageId,
+                'channel' => $payload->channel,
+                'to' => $payload->to,
+                'subject' => $payload->subject,
+                'templateKey' => $payload->templateKey,
+                'payload' => $payload->toArray(),
+                'status' => 'queued',
+                'idempotencyKey' => $payload->idempotencyKey,
+                'queuedAt' => now(),
+                'createdAt' => now(),
+                'updatedAt' => now(),
+            ];
+        }
+
+        // Atomic batch insert with chunking to avoid DB packet size limits
+        try {
+            DB::transaction(function () use ($dataToInsert, $payloads, $messageIds) {
+                $tableName = config('bird-flock.tables.outbound_messages');
+                $chunkSize = config('bird-flock.batch_insert_chunk_size', 500);
+
+                foreach (array_chunk($dataToInsert, $chunkSize) as $chunk) {
+                    DB::table($tableName)->insert($chunk);
+                }
+
+                // Dispatch all jobs
+                $queue = config('bird-flock.default_queue', 'default');
+                foreach ($payloads as $index => $payload) {
+                    $messageId = $messageIds[$index];
+
+                    Event::dispatch(new MessageQueued($messageId, $payload));
+
+                    $job = DispatchMessageJob::dispatch($messageId, $payload)
+                        ->onQueue($queue);
+
+                    if ($payload->sendAt) {
+                        $sendAtCarbon = \Illuminate\Support\Carbon::instance($payload->sendAt);
+                        if ($sendAtCarbon->isFuture()) {
+                            $delay = max(0, $sendAtCarbon->getTimestamp() - now()->getTimestamp());
+                            $job->delay($delay);
+                        }
+                    }
+                }
+            });
+
+            Logger::info('bird-flock.batch.dispatched', [
+                'count' => count($messageIds),
+                'message_ids' => $messageIds,
+            ]);
+        } catch (\Throwable $e) {
+            Logger::error('bird-flock.batch.failed', [
+                'count' => count($payloads),
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+
+        return $messageIds;
     }
 }

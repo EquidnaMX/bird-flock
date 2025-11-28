@@ -26,14 +26,29 @@ final class PayloadNormalizer
      */
     public static function normalizeWhatsAppRecipient(string $to): string
     {
-        if (str_starts_with($to, 'whatsapp:')) {
-            return $to;
+        $to = trim($to);
+        $to = self::stripSurroundingQuotes($to);
+
+        // If already has the prefix, normalize the rest and validate.
+        $hasPrefix = str_starts_with($to, 'whatsapp:');
+
+        $raw = $hasPrefix ? substr($to, 9) : $to;
+        $cleaned = preg_replace('/[^0-9+]/', '', $raw);
+
+        if ($cleaned === '' || $cleaned === '+') {
+            throw new \InvalidArgumentException('Invalid WhatsApp recipient — empty after normalization');
         }
 
-        $cleaned = preg_replace('/[^0-9+]/', '', $to);
-
-        if (!str_starts_with($cleaned, '+')) {
+        // Ensure leading plus
+        if (! str_starts_with($cleaned, '+')) {
             $cleaned = '+' . $cleaned;
+        }
+
+        // Validate digit length (E.164 allows up to 15 digits excluding '+').
+        $digits = preg_replace('/\D/', '', $cleaned);
+        $len = strlen($digits);
+        if ($len < 6 || $len > 15) {
+            throw new \InvalidArgumentException(sprintf('WhatsApp recipient has invalid length (%d digits)', $len));
         }
 
         return 'whatsapp:' . $cleaned;
@@ -48,13 +63,39 @@ final class PayloadNormalizer
      */
     public static function normalizePhoneNumber(string $phone): string
     {
+        $phone = trim($phone);
+        $phone = self::stripSurroundingQuotes($phone);
+
         $cleaned = preg_replace('/[^0-9+]/', '', $phone);
 
-        if (!str_starts_with($cleaned, '+')) {
+        if ($cleaned === '' || $cleaned === '+') {
+            throw new \InvalidArgumentException('Invalid phone number — empty after normalization');
+        }
+
+        if (! str_starts_with($cleaned, '+')) {
             $cleaned = '+' . $cleaned;
         }
 
+        $digits = preg_replace('/\D/', '', $cleaned);
+        $len = strlen($digits);
+        if ($len < 6 || $len > 15) {
+            throw new \InvalidArgumentException(sprintf('Phone number has invalid length (%d digits)', $len));
+        }
+
         return $cleaned;
+    }
+
+    private static function stripSurroundingQuotes(string $s): string
+    {
+        if (strlen($s) >= 2) {
+            $first = $s[0];
+            $last = $s[strlen($s) - 1];
+            if (($first === '"' && $last === '"') || ($first === "'" && $last === "'")) {
+                return substr($s, 1, -1);
+            }
+        }
+
+        return $s;
     }
 
     /**

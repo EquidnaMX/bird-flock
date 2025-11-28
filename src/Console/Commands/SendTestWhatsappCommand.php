@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Artisan command for sending test WhatsApp messages.
+ *
+ * PHP 8.1+
+ *
+ * @package   Equidna\BirdFlock\Console\Commands
+ * @author    Gabriel Ruelas <gruelas@gruelas.com>
+ * @license   https://opensource.org/licenses/MIT MIT License
+ */
+
 namespace Equidna\BirdFlock\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -19,7 +29,8 @@ final class SendTestWhatsappCommand extends Command
      * Detailed help shown by `php artisan help bird-flock:send-whatsapp`.
      *
      * Examples:
-     *  php artisan bird-flock:send-whatsapp "+14155551234" "Hello" --media="https://example.com/img.jpg" --idempotency="order-1234-whatsapp"
+     *  php artisan bird-flock:send-whatsapp "+14155551234" "Hello"
+     *      --media="https://example.com/img.jpg" --idempotency="order-1234-whatsapp"
      */
     protected $help = "Send a test WhatsApp message via Bird Flock.\n\n" .
         "Positional args: to (E.164 recipient), text (optional).\n" .

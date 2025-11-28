@@ -5,7 +5,7 @@ namespace Equidna\BirdFlock\Tests\Messaging\Senders;
 use Equidna\BirdFlock\DTO\FlightPlan;
 use Equidna\BirdFlock\Senders\TwilioWhatsappSender;
 use Equidna\BirdFlock\Tests\Support\TwilioMessageListFake;
-use PHPUnit\Framework\TestCase;
+use Equidna\BirdFlock\Tests\TestCase;
 use Twilio\Rest\Client;
 
 class TwilioWhatsappSenderTest extends TestCase
@@ -37,10 +37,12 @@ class TwilioWhatsappSenderTest extends TestCase
         $client = $this->createMock(Client::class);
         $client->messages = $messagesResource;
 
+        $this->setConfigValue('bird-flock.twilio.sandbox_mode', true);
+        $this->setConfigValue('bird-flock.twilio.sandbox_from', null);
+
         $sender = new TwilioWhatsappSender(
             client: $client,
             from: 'whatsapp:+15005550001',
-            sandboxMode: true,
         );
 
         $payload = new FlightPlan(
@@ -60,10 +62,11 @@ class TwilioWhatsappSenderTest extends TestCase
     {
         $client = $this->createMock(Client::class);
 
+        $this->setConfigValue('bird-flock.twilio.sandbox_mode', false);
+
         $sender = new TwilioWhatsappSender(
             client: $client,
             from: 'whatsapp:+15005550001',
-            sandboxMode: false,
         );
 
         $payload = new FlightPlan(
@@ -101,10 +104,12 @@ class TwilioWhatsappSenderTest extends TestCase
         $client = $this->createMock(Client::class);
         $client->messages = $messagesResource;
 
+        $this->setConfigValue('bird-flock.twilio.sandbox_mode', true);
+        $this->setConfigValue('bird-flock.twilio.sandbox_from', null);
+
         $sender = new TwilioWhatsappSender(
             client: $client,
             from: 'whatsapp:+15005550001',
-            sandboxMode: true,
         );
 
         $payload = new FlightPlan(
@@ -118,8 +123,3 @@ class TwilioWhatsappSenderTest extends TestCase
         $this->assertEquals('sent', $result->status);
     }
 }
-
-
-
-
-

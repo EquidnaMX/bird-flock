@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Event dispatched when a message is moved to the dead-letter queue.
+ *
+ * PHP 8.1+
+ *
+ * @package   Equidna\BirdFlock\Events
+ * @author    Gabriel Ruelas <gruelas@gruelas.com>
+ * @license   https://opensource.org/licenses/MIT MIT License
+ */
+
 namespace Equidna\BirdFlock\Events;
 
 final class MessageDeadLettered
@@ -9,6 +19,5 @@ final class MessageDeadLettered
         public readonly string $channel,
         public readonly ?string $errorCode = null,
         public readonly ?string $errorMessage = null
-    ) {
-    }
+    ) {}
 }

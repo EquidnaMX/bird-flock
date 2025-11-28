@@ -17,7 +17,9 @@ use SendGrid\Mail\Mail;
 use Equidna\BirdFlock\Contracts\MessageSenderInterface;
 use Equidna\BirdFlock\DTO\FlightPlan;
 use Equidna\BirdFlock\DTO\ProviderSendResult;
+use Equidna\BirdFlock\Support\CircuitBreaker;
 use Equidna\BirdFlock\Support\Logger;
+use Equidna\BirdFlock\Support\Masking;
 use Exception;
 use Throwable;
 
@@ -27,6 +29,8 @@ use Throwable;
 final class SendgridEmailSender implements MessageSenderInterface
 {
     private const MAX_ATTACHMENT_SIZE = 10485760;
+
+    private readonly CircuitBreaker $circuitBreaker;
 
     /**
      * Create a new SendGrid email sender.
@@ -44,7 +48,12 @@ final class SendgridEmailSender implements MessageSenderInterface
         private readonly ?string $replyTo = null,
         private readonly array $templates = [],
     ) {
-        //
+        $this->circuitBreaker = new CircuitBreaker(
+            service: 'sendgrid_email',
+            failureThreshold: config('bird-flock.circuit_breaker.failure_threshold', 5),
+            timeout: config('bird-flock.circuit_breaker.timeout', 60),
+            successThreshold: config('bird-flock.circuit_breaker.success_threshold', 2)
+        );
     }
 
     /**
@@ -56,10 +65,27 @@ final class SendgridEmailSender implements MessageSenderInterface
      */
     public function send(FlightPlan $payload): ProviderSendResult
     {
+        // Check circuit breaker before attempting send
+        if (!$this->circuitBreaker->isAvailable()) {
+            Logger::warning('bird-flock.sender.sendgrid_email.circuit_open', [
+                'to' => $payload->to,
+            ]);
+
+            return ProviderSendResult::failed(
+                errorCode: 'CIRCUIT_OPEN',
+                errorMessage: 'SendGrid service is temporarily unavailable due to repeated failures'
+            );
+        }
+
         try {
             $mail = new Mail();
             $mail->setFrom($this->fromEmail, $this->fromName);
             $mail->addTo($payload->to);
+
+            Logger::info('bird-flock.sender.sendgrid.preparing', [
+                'to' => Masking::maskEmail($payload->to),
+                'template_key' => $payload->templateKey,
+            ]);
 
             if ($this->replyTo) {
                 $mail->setReplyTo($this->replyTo);
@@ -125,30 +151,49 @@ final class SendgridEmailSender implements MessageSenderInterface
             if ($statusCode >= 200 && $statusCode < 300) {
                 $messageId = $response->headers()['X-Message-Id'] ?? null;
 
-                return ProviderSendResult::success(
+                $result = ProviderSendResult::success(
                     providerMessageId: $messageId ?? 'unknown',
                     raw: [
                         'status_code' => $statusCode,
                         'body' => $response->body(),
                     ],
                 );
+
+                $this->circuitBreaker->recordSuccess();
+
+                return $result;
             }
 
-            if ($statusCode === 429 || $statusCode >= 500) {
+            // Classify errors: transient (retry) vs permanent (undeliverable)
+            $transientCodes = [408, 425, 429, 503, 504];
+            $isTransient = in_array($statusCode, $transientCodes, true) || $statusCode >= 500;
+
+            if ($isTransient) {
+                // Record circuit breaker failure for transient errors
+                $this->circuitBreaker->recordFailure();
+
                 return ProviderSendResult::failed(
                     errorCode: (string) $statusCode,
                     errorMessage: $response->body(),
                 );
             }
 
+            // Permanent client errors don't trigger circuit breaker
             return ProviderSendResult::undeliverable(
                 errorCode: (string) $statusCode,
                 errorMessage: $response->body(),
             );
         } catch (Exception $e) {
+            $errorMsg = $e->getMessage();
             Logger::warning('bird-flock.sender.sendgrid.exception', [
-                'message' => $e->getMessage(),
+                'message' => strlen($errorMsg) > 500
+                    ? substr($errorMsg, 0, 500) . '...'
+                    : $errorMsg,
+                'to' => Masking::maskEmail($payload->to),
             ]);
+
+            // Record failure for unexpected errors
+            $this->circuitBreaker->recordFailure();
 
             return ProviderSendResult::failed(
                 errorCode: 'SENDGRID_ERROR',
@@ -158,6 +203,9 @@ final class SendgridEmailSender implements MessageSenderInterface
             Logger::error('bird-flock.sender.sendgrid.unhandled', [
                 'message' => $e->getMessage(),
             ]);
+
+            // Record failure for unexpected errors
+            $this->circuitBreaker->recordFailure();
 
             return ProviderSendResult::failed(
                 errorCode: 'UNKNOWN',
