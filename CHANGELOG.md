@@ -20,12 +20,14 @@ First stable release of Bird Flock, a production-ready multi-channel messaging b
 ### ✨ Core Features
 
 #### Multi-Channel Support
+
 - **SMS**: Twilio and Vonage (Nexmo) provider support
 - **WhatsApp**: Twilio WhatsApp Business API integration
 - **Email**: SendGrid and Mailgun provider support
 - Provider abstraction layer for easy extension
 
 #### Reliability & Fault Tolerance
+
 - **Idempotency**: Prevent duplicate message sends with configurable idempotency keys
 - **Circuit Breakers**: Automatic provider failure detection and fail-fast behavior
   - Configurable failure threshold (default: 5 failures)
@@ -42,6 +44,7 @@ First stable release of Bird Flock, a production-ready multi-channel messaging b
   - Configurable delay bounds (default: 1s–60s)
 
 #### Queue-Based Architecture
+
 - Asynchronous message processing via Laravel queues
 - Support for all Laravel queue drivers (Redis, Database, SQS, etc.)
 - Channel-specific job routing (SendSmsJob, SendWhatsappJob, SendEmailJob)
@@ -49,6 +52,7 @@ First stable release of Bird Flock, a production-ready multi-channel messaging b
 - Batch dispatch support with chunked database inserts (500 records per chunk)
 
 #### Webhook Processing
+
 - **Twilio**: SMS and WhatsApp delivery status webhooks, inbound message handling
 - **SendGrid**: Email event webhooks (delivered, bounced, opened, clicked, etc.)
 - **Vonage**: SMS delivery receipts and inbound message webhooks
@@ -58,6 +62,7 @@ First stable release of Bird Flock, a production-ready multi-channel messaging b
 - Automatic message status updates from provider callbacks
 
 #### Developer Experience
+
 - **Artisan Commands**:
   - `bird-flock:config-validate` — Validate package configuration
   - `bird-flock:dead-letter` — Manage dead-letter queue (list, replay, purge)
@@ -74,12 +79,14 @@ First stable release of Bird Flock, a production-ready multi-channel messaging b
   - `MessageRetryScheduled`, `WebhookReceived`
 
 #### Observability
+
 - **Structured Logging**: PII-masked logs with contextual data
 - **Metrics Collection**: Built-in `MetricsCollectorInterface` for custom integrations
 - **PII Masking**: Automatic masking of phone numbers and email addresses in logs
 - **Configuration Validation**: Boot-time validation with clear error messages
 
 #### Security
+
 - **Webhook Signature Validation**: Cryptographic verification for all providers
   - Twilio: HMAC-SHA1 signature validation
   - SendGrid: ECDSA public key verification
@@ -92,6 +99,7 @@ First stable release of Bird Flock, a production-ready multi-channel messaging b
 ### 📦 Package Structure
 
 #### Core Components
+
 - **BirdFlock**: Main facade for message dispatch
 - **FlightPlan**: DTO for message payload definition
 - **ProviderSendResult**: DTO for provider API responses
@@ -99,6 +107,7 @@ First stable release of Bird Flock, a production-ready multi-channel messaging b
 - **DeadLetterEntry**: Eloquent model for failed message tracking
 
 #### Infrastructure
+
 - **Jobs**: Channel-specific send jobs with automatic retry handling
 - **Senders**: Provider-specific API integrations
 - **Repositories**: Eloquent-based persistence layer with interface abstraction
@@ -110,6 +119,7 @@ First stable release of Bird Flock, a production-ready multi-channel messaging b
 ### 📚 Documentation
 
 Comprehensive documentation included:
+
 - **Deployment Instructions**: Complete setup and production deployment guide
 - **API Documentation**: HTTP endpoints reference
 - **Routes Documentation**: All registered routes and middleware
@@ -135,6 +145,7 @@ Comprehensive documentation included:
 ### 🔧 Configuration
 
 #### Environment Variables
+
 - Provider credentials (Twilio, SendGrid, Vonage, Mailgun)
 - Queue configuration
 - Dead-letter queue toggle
@@ -145,6 +156,7 @@ Comprehensive documentation included:
 - Payload size limits
 
 #### Provider-Specific Settings
+
 - Twilio: Sandbox mode, messaging service SID, status callback URLs
 - SendGrid: Webhook signature verification, reply-to addresses
 - Vonage: Signature validation, delivery receipt URLs
@@ -153,6 +165,7 @@ Comprehensive documentation included:
 ### 🐛 Bug Fixes
 
 #### Job Delay Calculation Fix
+
 - Fixed `DispatchMessageJob` to properly convert millisecond delays to seconds
 - Prevents job scheduling errors when using exponential backoff with Laravel's queue delay mechanism
 - Ensures retry delays are correctly applied (minimum 1 second)
@@ -160,6 +173,7 @@ Comprehensive documentation included:
 ### 💅 Code Quality
 
 #### PHPDoc Standards
+
 - Complete file-level DocBlocks for all 48+ PHP files in `src/`
 - Aligned PHPDoc tags following PHPDocStyle.instructions.md
 - Added missing `@throws` documentation for all public methods
@@ -167,6 +181,7 @@ Comprehensive documentation included:
 - Removed redundant `@param` documentation from constructors
 
 #### Code Style
+
 - Consistent trailing commas in multi-line arrays and parameter lists
 - Anonymous class spacing normalization
 - Empty constructor body formatting fixes
@@ -200,6 +215,7 @@ Comprehensive documentation included:
 ### 🔮 Future Considerations
 
 See `doc/open-questions-and-assumptions.md` for:
+
 - Multi-tenancy support strategies
 - Multi-provider routing and failover
 - Message cancellation for scheduled sends
@@ -211,6 +227,7 @@ See `doc/open-questions-and-assumptions.md` for:
 ### 📦 Dependencies
 
 #### Production
+
 - `php: >=8.3`
 - `laravel/framework: ^11.0`
 - `illuminate/*: ^10 || ^11 || ^12` (support, queue, events, http, config, routing)
@@ -223,6 +240,7 @@ See `doc/open-questions-and-assumptions.md` for:
 - `mailgun/mailgun-php: ^4.3`
 
 #### Development
+
 - `phpunit/phpunit: ^10.0`
 - `squizlabs/php_codesniffer: ^4.0`
 - `illuminate/database: ^11.0`
@@ -248,21 +266,27 @@ All future releases MUST follow this structure:
 ## [X.Y.Z] - YYYY-MM-DD - "Codename"
 
 ### Added
+
 - New features
 
 ### Changed
+
 - Changes to existing functionality
 
 ### Deprecated
+
 - Features marked for future removal
 
 ### Removed
+
 - Features removed in this release
 
 ### Fixed
+
 - Bug fixes
 
 ### Security
+
 - Security improvements and vulnerability patches
 ```
 

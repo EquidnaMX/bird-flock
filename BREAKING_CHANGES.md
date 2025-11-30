@@ -23,33 +23,40 @@ This is the first stable release of Bird Flock. As this is the initial version, 
 A breaking change is any modification that:
 
 1. **Removes or renames public API methods, classes, or interfaces**
+
    - Example: Removing `BirdFlock::send()` method
    - Example: Renaming `FlightPlan` class to `MessagePayload`
 
 2. **Changes method signatures in non-backward-compatible ways**
+
    - Example: Changing required parameter order
    - Example: Removing optional parameters
    - Example: Changing parameter types without union type support
 
 3. **Modifies database schema without migration path**
+
    - Example: Renaming table columns
    - Example: Changing column types incompatibly
    - Example: Removing columns
 
 4. **Changes configuration structure incompatibly**
+
    - Example: Renaming config keys
    - Example: Changing config value formats (string → array)
    - Example: Removing config options
 
 5. **Changes event payload structures**
+
    - Example: Removing fields from `MessageQueued` event
    - Example: Changing event constructor signatures
 
 6. **Changes minimum PHP or Laravel version requirements**
+
    - Example: Upgrading from PHP 8.3 to PHP 8.4
    - Example: Requiring Laravel 12.x minimum
 
 7. **Changes behavior of idempotency keys**
+
    - Example: Changing key format requirements
    - Example: Altering deduplication logic
 
@@ -78,10 +85,11 @@ The following are **not** considered breaking changes:
 
 For all future breaking changes, use this template:
 
-```markdown
+````markdown
 ## Version X.Y.Z - "Codename" (YYYY-MM-DD)
 
 ### Summary
+
 Brief description of breaking changes in this release.
 
 ### Breaking Change 1: [Title]
@@ -93,28 +101,35 @@ Brief description of breaking changes in this release.
 **Impact**: Who is affected and how.
 
 #### Before (Old Code)
+
 ```php
 // Example of old code that will break
 ```
+````
 
 #### After (New Code)
+
 ```php
 // Example of new code to migrate to
 ```
 
 #### Migration Steps
+
 1. Step 1: Specific action to take
 2. Step 2: Update code references
 3. Step 3: Run migrations (if applicable)
 4. Step 4: Test your implementation
 
 #### Rollback Plan
+
 If you cannot migrate immediately:
+
 - Temporary workaround or compatibility layer
 - Timeline for forced upgrade
 
 ---
-```
+
+````
 
 ---
 
@@ -150,17 +165,17 @@ public function createFromArray(array $data): FlightPlan
         'Method ' . __METHOD__ . ' is deprecated, use FlightPlan::fromArray() instead',
         E_USER_DEPRECATED
     );
-    
+
     return $this->fromArray($data);
 }
-```
+````
 
 ---
 
 ## Version Compatibility Matrix
 
 | Bird Flock Version | PHP Version | Laravel Version | Breaking Changes |
-|--------------------|-------------|-----------------|------------------|
+| ------------------ | ----------- | --------------- | ---------------- |
 | 1.0.0 (Phoenix)    | ≥8.3        | ^11.0           | None (initial)   |
 
 ---
@@ -174,6 +189,7 @@ In rare cases (security vulnerabilities, critical bugs), breaking changes may be
 3. Provider API deprecation forces adaptation
 
 Such changes will:
+
 - Be clearly marked as **EMERGENCY BREAKING CHANGE** in changelog
 - Include detailed justification
 - Provide automated migration tools when possible
