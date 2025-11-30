@@ -22,5 +22,6 @@ final class MessageRetryScheduled
         public readonly string $channel,
         public readonly int $attempt,
         public readonly int $delaySeconds
-    ) {}
+    ) {
+    }
 }

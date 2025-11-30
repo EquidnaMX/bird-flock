@@ -53,6 +53,10 @@ return [
         'api_secret' => env('VONAGE_API_SECRET'),
         'from_sms' => env('VONAGE_FROM_SMS'),
         'timeout' => env('VONAGE_TIMEOUT', 30),
+        'signature_secret' => env('VONAGE_SIGNATURE_SECRET'),
+        'require_signed_webhooks' => env('VONAGE_REQUIRE_SIGNED_WEBHOOKS', true),
+        'delivery_receipt_url' => env('VONAGE_DELIVERY_RECEIPT_URL'),
+        'inbound_url' => env('VONAGE_INBOUND_URL'),
     ],
 
     'mailgun' => [
@@ -64,6 +68,9 @@ return [
         'templates' => [],
         'timeout' => env('MAILGUN_TIMEOUT', 30),
         'endpoint' => env('MAILGUN_ENDPOINT', 'api.mailgun.net'),
+        'webhook_signing_key' => env('MAILGUN_WEBHOOK_SIGNING_KEY'),
+        'require_signed_webhooks' => env('MAILGUN_REQUIRE_SIGNED_WEBHOOKS', true),
+        'webhook_url' => env('MAILGUN_WEBHOOK_URL'),
     ],
 
     'logging' => [
@@ -107,4 +114,7 @@ return [
 
     // Batch insert chunk size to avoid DB packet size limits
     'batch_insert_chunk_size' => env('BIRD_FLOCK_BATCH_INSERT_CHUNK_SIZE', 500),
+
+    // Webhook rate limit (requests per minute per IP)
+    'webhook_rate_limit' => env('BIRD_FLOCK_WEBHOOK_RATE_LIMIT', 60),
 ];

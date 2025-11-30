@@ -62,7 +62,8 @@ final class DispatchMessageJob implements ShouldQueue
             $attemptIndex = max(0, $this->attempts() - 1);
             $delay = BackoffStrategy::exponentialWithJitter($attemptIndex);
 
-            $job->onQueue($queue)->delay(now()->addMilliseconds($delay));
+            $delaySeconds = max(1, (int) ceil($delay / 1000));
+            $job->onQueue($queue)->delay($delaySeconds);
 
             dispatch($job);
         }

@@ -56,9 +56,9 @@ final class TwilioSmsSender implements MessageSenderInterface
     /**
      * Send an SMS message.
      *
-     * @param FlightPlan $payload Message data
-     *
-     * @return ProviderSendResult Result of send operation
+     * @param  FlightPlan $payload Message data
+     * @return ProviderSendResult  Result of send operation
+     * @throws \Throwable          When an unexpected error occurs during send
      */
     public function send(FlightPlan $payload): ProviderSendResult
     {

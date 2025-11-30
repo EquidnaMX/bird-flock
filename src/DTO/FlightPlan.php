@@ -45,7 +45,42 @@ final class FlightPlan
         public readonly ?string $idempotencyKey = null,
         public readonly ?\DateTimeInterface $sendAt = null,
     ) {
-        //
+        // Validate channel
+        $validChannels = ['sms', 'whatsapp', 'email'];
+        if (!in_array($channel, $validChannels, true)) {
+            throw new \InvalidArgumentException(
+                "Invalid channel '{$channel}'. Must be one of: " . implode(', ', $validChannels)
+            );
+        }
+
+        // Validate recipient
+        if (trim($to) === '') {
+            throw new \InvalidArgumentException('Recipient (to) cannot be empty');
+        }
+
+        // Validate email format for email channel
+        if ($channel === 'email' && !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            throw new \InvalidArgumentException(
+                "Invalid email address '{$to}' for email channel"
+            );
+        }
+
+        // Validate phone number length for sms/whatsapp
+        if (in_array($channel, ['sms', 'whatsapp'], true)) {
+            $cleaned = preg_replace('/[^0-9+]/', '', $to);
+            if (strlen($cleaned) < 8 || strlen($cleaned) > 20) {
+                throw new \InvalidArgumentException(
+                    "Invalid phone number '{$to}' for {$channel} channel (must be 8-20 digits)"
+                );
+            }
+        }
+
+        // Validate idempotency key length
+        if ($idempotencyKey !== null && strlen($idempotencyKey) > 128) {
+            throw new \InvalidArgumentException(
+                'Idempotency key cannot exceed 128 characters'
+            );
+        }
     }
 
     /**

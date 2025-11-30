@@ -28,7 +28,7 @@ final class ConfigValidator
      * warnings via the package logger.
      *
      * @return void
-     * @throws RuntimeException When critical credentials are missing
+     * @throws \RuntimeException When critical credentials are missing
      */
     public function validateAll(): void
     {
@@ -63,7 +63,7 @@ final class ConfigValidator
      * Validate Twilio credentials and From/Messaging Service configuration.
      *
      * @return void
-     * @throws RuntimeException When TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN is missing
+     * @throws \RuntimeException When TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN is missing
      */
     private function validateTwilio(): void
     {
@@ -110,7 +110,7 @@ final class ConfigValidator
      * Validate SendGrid webhook signing and From email configuration.
      *
      * @return void
-     * @throws RuntimeException When SENDGRID_WEBHOOK_PUBLIC_KEY is missing while webhook signing is required
+     * @throws \RuntimeException When SENDGRID_WEBHOOK_PUBLIC_KEY is missing while webhook signing is required
      */
     private function validateSendgrid(): void
     {

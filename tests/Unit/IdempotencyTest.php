@@ -13,7 +13,7 @@ final class IdempotencyTest extends TestCase
 {
     private function makeRepo(array $existing = []): OutboundMessageRepositoryInterface
     {
-        return new class($existing) implements OutboundMessageRepositoryInterface {
+        return new class ($existing) implements OutboundMessageRepositoryInterface {
             private array $messages = [];
             private array $byKey = [];
             public function __construct(array $existing)

@@ -35,5 +35,6 @@ final class MessageDuplicateSkipped
         public string $idempotencyKey,
         public string $channel,
         public ?FlightPlan $payload = null,
-    ) {}
+    ) {
+    }
 }

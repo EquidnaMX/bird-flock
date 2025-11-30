@@ -24,7 +24,8 @@ final class DeadLetterService
 {
     public function __construct(
         private readonly OutboundMessageRepositoryInterface $repository,
-    ) {}
+    ) {
+    }
 
     public function record(
         string $messageId,

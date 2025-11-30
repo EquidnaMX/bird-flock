@@ -19,5 +19,6 @@ final class MessageDeadLettered
         public readonly string $channel,
         public readonly ?string $errorCode = null,
         public readonly ?string $errorMessage = null
-    ) {}
+    ) {
+    }
 }

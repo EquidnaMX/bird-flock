@@ -21,5 +21,6 @@ final class MessageSending
         public readonly string $channel,
         public readonly FlightPlan $payload,
         public readonly int $attempt
-    ) {}
+    ) {
+    }
 }

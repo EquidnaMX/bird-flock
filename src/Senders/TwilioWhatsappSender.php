@@ -35,7 +35,6 @@ final class TwilioWhatsappSender implements MessageSenderInterface
      *
      * @param Client      $client         Twilio client instance
      * @param string      $from           From WhatsApp number (whatsapp:+...)
-     * @param bool        $sandboxMode    Whether sandbox mode is enabled
      * @param string|null $statusCallback Optional status callback URL
      */
     public function __construct(
@@ -55,9 +54,9 @@ final class TwilioWhatsappSender implements MessageSenderInterface
     /**
      * Send a WhatsApp message.
      *
-     * @param FlightPlan $payload Message data
-     *
-     * @return ProviderSendResult Result of send operation
+     * @param  FlightPlan $payload Message data
+     * @return ProviderSendResult  Result of send operation
+     * @throws \Throwable          When an unexpected error occurs during send
      */
     public function send(FlightPlan $payload): ProviderSendResult
     {

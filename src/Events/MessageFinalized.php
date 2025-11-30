@@ -20,5 +20,6 @@ final class MessageFinalized
         public readonly string $messageId,
         public readonly string $channel,
         public readonly ProviderSendResult $result
-    ) {}
+    ) {
+    }
 }

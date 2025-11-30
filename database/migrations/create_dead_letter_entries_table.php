@@ -25,6 +25,10 @@ return new class extends Migration {
 
             $table->index('message_id', 'dlq_message_id');
             $table->index('channel', 'dlq_channel');
+
+            // Performance optimization indexes
+            $table->index('created_at', 'idx_dlq_created_at');
+            $table->index(['channel', 'created_at'], 'idx_dlq_channel_created');
         });
     }
 

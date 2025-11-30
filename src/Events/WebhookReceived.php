@@ -25,5 +25,6 @@ final class WebhookReceived
         public readonly string $provider,
         public readonly string $type,
         public readonly array $payload,
-    ) {}
+    ) {
+    }
 }

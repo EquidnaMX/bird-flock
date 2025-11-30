@@ -45,6 +45,12 @@ return new class extends Migration {
             $table->unique('idempotencyKey', 'uniq_idempotencyKey');
             $table->index(['providerMessageId', 'status'], 'idx_provider_status');
             $table->index(['channel', 'status'], 'idx_channel_status');
+
+            // Performance optimization indexes
+            $table->index('createdAt', 'idx_created_at');
+            $table->index(['status', 'attempts', 'createdAt'], 'idx_status_attempts_created');
+            $table->index('providerMessageId', 'idx_provider_message_id');
+            $table->index(['status', 'queuedAt'], 'idx_status_queued_at');
         });
     }
 
