@@ -157,6 +157,9 @@ Detailed guides and references:
 - **[Open Questions & Assumptions](doc/open-questions-and-assumptions.md)**  
   Unresolved items and clarifications needed from maintainers
 
+- **[Reusable Toolkit Components](doc/reusable-toolkit-components.md)**  
+  Components that can be extracted to `equidna/laravel-toolkit` for use in other projects
+
 ---
 
 ## License
