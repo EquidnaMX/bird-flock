@@ -117,4 +117,9 @@ return [
 
     // Webhook rate limit (requests per minute per IP)
     'webhook_rate_limit' => env('BIRD_FLOCK_WEBHOOK_RATE_LIMIT', 60),
+
+    // Health check endpoints
+    'health' => [
+        'enabled' => env('BIRD_FLOCK_HEALTH_ENABLED', true),
+    ],
 ];
