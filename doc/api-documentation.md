@@ -23,6 +23,12 @@ https://yourdomain.com/bird-flock/*
 
 ## Health Check Endpoints
 
+> **For Dashboard Integration**: Bird Flock provides both HTTP endpoints and programmatic interfaces for health monitoring. See the [Health API Integration Guide](health-api-integration.md) for comprehensive examples of integrating Bird Flock health into your centralized dashboard using:
+> - Direct HTTP polling from monitoring systems
+> - Programmatic PHP access via `HealthService` class
+> - Dashboard examples (Laravel Blade, Vue.js, React)
+> - Monitoring system integrations (Grafana, Datadog, Prometheus)
+
 ### 1. General Health Check
 
 **Endpoint**: `GET /bird-flock/health`  
@@ -31,26 +37,73 @@ https://yourdomain.com/bird-flock/*
 **Authentication**: None  
 **Rate Limit**: None
 
-**Purpose**: Returns basic health status and configuration summary.
+**Purpose**: Returns comprehensive health status including all checks and metrics. Suitable for monitoring and dashboard integration.
 
 **Response** (200 OK):
 
 ```json
 {
-  "status": "ok",
-  "package": "equidna/bird-flock",
-  "configured_channels": ["sms", "whatsapp", "email"],
-  "queue": "default",
-  "dlq_enabled": true
+  "status": "healthy",
+  "version": "1.0.0",
+  "checks": {
+    "database": {
+      "healthy": true,
+      "message": "Database connected and table exists"
+    },
+    "twilio": {
+      "healthy": true,
+      "message": "Twilio configured"
+    },
+    "sendgrid": {
+      "healthy": true,
+      "message": "SendGrid configured"
+    },
+    "queue": {
+      "healthy": true,
+      "message": "Queue configured: default"
+    },
+    "circuits": {
+      "healthy": true,
+      "message": "All circuits closed",
+      "states": {
+        "twilio_sms": "closed",
+        "twilio_whatsapp": "closed",
+        "sendgrid_email": "closed"
+      }
+    }
+  },
+  "metrics": {
+    "dlq": {
+      "count": 0,
+      "by_channel": {}
+    },
+    "queue": {
+      "pending": 0,
+      "queue_name": "default"
+    },
+    "performance": {
+      "avg_sender_duration_ms": null,
+      "recent_samples": 0
+    }
+  },
+  "timestamp": "2025-12-10T22:37:00Z"
 }
 ```
 
-**Response** (503 Service Unavailable) — if critical config missing:
+**Response** (503 Service Unavailable) — if any check fails:
 
 ```json
 {
-  "status": "error",
-  "message": "No messaging providers configured"
+  "status": "degraded",
+  "version": "1.0.0",
+  "checks": {
+    "database": {
+      "healthy": false,
+      "message": "Database connection failed: ..."
+    }
+  },
+  "metrics": {},
+  "timestamp": "2025-12-10T22:37:00Z"
 }
 ```
 
@@ -59,6 +112,8 @@ https://yourdomain.com/bird-flock/*
 ```bash
 curl https://yourdomain.com/bird-flock/health
 ```
+
+> **For Dashboard Integration**: See the [Health API Integration Guide](health-api-integration.md) for detailed examples of integrating this API into your centralized monitoring dashboard.
 
 ---
 
@@ -70,38 +125,62 @@ curl https://yourdomain.com/bird-flock/health
 **Authentication**: None  
 **Rate Limit**: None
 
-**Purpose**: Returns current circuit breaker state for all providers.
+**Purpose**: Returns detailed circuit breaker state for all providers with configuration and recovery information.
 
 **Response** (200 OK):
 
 ```json
 {
-  "circuit_breakers": {
+  "status": "healthy",
+  "circuits": {
     "twilio_sms": {
       "state": "closed",
+      "healthy": true,
       "failure_count": 0,
-      "last_failure_at": null
+      "success_count": 125,
+      "trial_count": 0,
+      "configuration": {
+        "failure_threshold": 5,
+        "timeout_seconds": 60,
+        "success_threshold": 2
+      },
+      "status_message": "Circuit closed - normal operation"
     },
     "sendgrid_email": {
       "state": "open",
+      "healthy": false,
       "failure_count": 5,
-      "last_failure_at": "2025-11-30T10:23:45Z"
+      "success_count": 0,
+      "trial_count": 0,
+      "last_failure_at": "2025-12-10T22:30:00Z",
+      "seconds_since_failure": 420,
+      "recovery_in_seconds": 0,
+      "estimated_recovery_at": "2025-12-10T22:31:00Z",
+      "configuration": {
+        "failure_threshold": 5,
+        "timeout_seconds": 60,
+        "success_threshold": 2
+      },
+      "status_message": "Circuit open - blocking requests to protect service"
     }
-  }
+  },
+  "timestamp": "2025-12-10T22:37:00Z"
 }
 ```
 
-**States**:
+**Circuit States**:
 
-- `closed` — Normal operation
-- `open` — Circuit tripped; requests fail fast
-- `half_open` — Testing recovery
+- `closed` — Normal operation, all requests allowed
+- `open` — Circuit tripped; requests fail fast to protect service
+- `half_open` — Testing recovery with limited trial requests
 
 **Example Request**:
 
 ```bash
 curl https://yourdomain.com/bird-flock/health/circuit-breakers
 ```
+
+> **For Dashboard Integration**: See the [Health API Integration Guide](health-api-integration.md) for examples of monitoring circuit breakers in your dashboard.
 
 ---
 
