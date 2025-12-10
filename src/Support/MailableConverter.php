@@ -13,6 +13,7 @@
 namespace Equidna\BirdFlock\Support;
 
 use Equidna\BirdFlock\DTO\FlightPlan;
+use Equidna\BirdFlock\Support\Logger;
 use Illuminate\Contracts\Mail\Mailable as MailableContract;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\View;
@@ -45,18 +46,21 @@ final class MailableConverter
         // Extract subject from mailable
         $subject = $mailable->subject ?? null;
 
+        // Get view data using reflection to access protected buildViewData method
+        $viewData = self::getViewData($mailable);
+
         // Render the mailable views
         $html = null;
         $text = null;
 
         // Check if mailable has a view
         if (isset($mailable->view) && $mailable->view) {
-            $html = self::renderView($mailable->view, $mailable->buildViewData());
+            $html = self::renderView($mailable->view, $viewData);
         }
 
         // Check if mailable has a text view
         if (isset($mailable->textView) && $mailable->textView) {
-            $text = self::renderView($mailable->textView, $mailable->buildViewData());
+            $text = self::renderView($mailable->textView, $viewData);
         }
 
         // If no text view but has HTML, extract text from HTML as fallback
@@ -65,33 +69,7 @@ final class MailableConverter
         }
 
         // Handle attachments by encoding them in metadata
-        $attachments = [];
-        
-        if (method_exists($mailable, 'attachments') && is_callable([$mailable, 'attachments'])) {
-            $mailableAttachments = $mailable->attachments();
-            
-            if (is_array($mailableAttachments)) {
-                foreach ($mailableAttachments as $attachment) {
-                    if (is_object($attachment) && method_exists($attachment, 'toArray')) {
-                        $attachmentData = $attachment->toArray();
-                    } elseif (is_array($attachment)) {
-                        $attachmentData = $attachment;
-                    } else {
-                        continue;
-                    }
-                    
-                    // Read file content if path is provided
-                    if (isset($attachmentData['path']) && file_exists($attachmentData['path'])) {
-                        $content = file_get_contents($attachmentData['path']);
-                        $attachments[] = [
-                            'content' => base64_encode($content),
-                            'filename' => $attachmentData['name'] ?? basename($attachmentData['path']),
-                            'type' => $attachmentData['mime'] ?? mime_content_type($attachmentData['path']) ?: 'application/octet-stream',
-                        ];
-                    }
-                }
-            }
-        }
+        $attachments = self::extractAttachments($mailable);
 
         // Merge attachments into metadata
         if (!empty($attachments)) {
@@ -111,6 +89,33 @@ final class MailableConverter
     }
 
     /**
+     * Get view data from mailable using reflection.
+     *
+     * @param  Mailable|MailableContract $mailable The mailable instance.
+     * @return array<string,mixed>                 View data array.
+     */
+    private static function getViewData(Mailable|MailableContract $mailable): array
+    {
+        try {
+            // Try to call buildViewData if it's accessible
+            $reflection = new \ReflectionClass($mailable);
+            $method = $reflection->getMethod('buildViewData');
+            $method->setAccessible(true);
+            return $method->invoke($mailable);
+        } catch (\ReflectionException $e) {
+            // Fallback: return public properties
+            $data = [];
+            $reflection = new \ReflectionClass($mailable);
+            foreach ($reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+                if (!$property->isStatic()) {
+                    $data[$property->getName()] = $property->getValue($mailable);
+                }
+            }
+            return $data;
+        }
+    }
+
+    /**
      * Render a view with data.
      *
      * @param  string              $view View name.
@@ -120,6 +125,60 @@ final class MailableConverter
     private static function renderView(string $view, array $data): string
     {
         return View::make($view, $data)->render();
+    }
+
+    /**
+     * Extract attachments from mailable.
+     *
+     * @param  Mailable|MailableContract $mailable The mailable instance.
+     * @return array<array<string,string>>        Array of attachment data.
+     */
+    private static function extractAttachments(Mailable|MailableContract $mailable): array
+    {
+        $attachments = [];
+
+        // Access the attachments property via reflection
+        try {
+            $reflection = new \ReflectionClass($mailable);
+            
+            // Laravel's Mailable stores attachments in a protected property
+            if ($reflection->hasProperty('attachments')) {
+                $property = $reflection->getProperty('attachments');
+                $property->setAccessible(true);
+                $mailableAttachments = $property->getValue($mailable);
+
+                if (is_array($mailableAttachments)) {
+                    foreach ($mailableAttachments as $attachment) {
+                        $attachmentData = null;
+                        
+                        // Handle different attachment formats
+                        if (is_object($attachment) && method_exists($attachment, 'toArray')) {
+                            $attachmentData = $attachment->toArray();
+                        } elseif (is_array($attachment)) {
+                            $attachmentData = $attachment;
+                        }
+
+                        if ($attachmentData && isset($attachmentData['file']) && file_exists($attachmentData['file'])) {
+                            $filePath = $attachmentData['file'];
+                            $content = file_get_contents($filePath);
+                            
+                            $attachments[] = [
+                                'content' => base64_encode($content),
+                                'filename' => $attachmentData['options']['as'] ?? basename($filePath),
+                                'type' => $attachmentData['options']['mime'] ?? mime_content_type($filePath) ?: 'application/octet-stream',
+                            ];
+                        }
+                    }
+                }
+            }
+        } catch (\ReflectionException $e) {
+            // If we can't access attachments, just skip them
+            Logger::warning('bird-flock.mailable.attachments_skipped', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $attachments;
     }
 
     /**

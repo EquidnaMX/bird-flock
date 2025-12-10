@@ -2,6 +2,12 @@
 
 **Bird Flock** provides seamless integration with Laravel's Mailable classes, allowing you to leverage the full power of Laravel's mail system while benefiting from Bird Flock's idempotency, retry logic, circuit breakers, and dead-letter queue support.
 
+> **📁 Complete Examples**: Full working examples are available in the [`doc/examples/`](examples/) directory:
+> - [`WelcomeEmail.php`](examples/WelcomeEmail.php) - Example Mailable class
+> - [`welcome.blade.php`](examples/welcome.blade.php) - HTML email template
+> - [`welcome-text.blade.php`](examples/welcome-text.blade.php) - Plain text template
+> - [`usage-example.php`](examples/usage-example.php) - Various usage scenarios
+
 ---
 
 ## Overview
