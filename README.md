@@ -110,6 +110,8 @@ php artisan queue:work --queue=default
 
 ### 6. Dispatch Your First Message
 
+#### Option A: Using FlightPlan (Direct Message)
+
 ```php
 use Equidna\BirdFlock\BirdFlock;
 use Equidna\BirdFlock\DTO\FlightPlan;
@@ -117,12 +119,37 @@ use Equidna\BirdFlock\DTO\FlightPlan;
 $plan = new FlightPlan(
     channel: 'sms',
     to: '+1234567890',
-    body: 'Hello from Bird Flock!',
+    text: 'Hello from Bird Flock!',
     idempotencyKey: 'user:123:welcome-sms'
 );
 
 $messageId = BirdFlock::dispatch($plan);
 ```
+
+#### Option B: Using Laravel Mailables (Email)
+
+```php
+use Equidna\BirdFlock\BirdFlock;
+use App\Mail\WelcomeEmail;
+
+// Create your Laravel Mailable as usual
+$mailable = new WelcomeEmail($user);
+
+// Dispatch it through Bird Flock
+$messageId = BirdFlock::dispatchMailable(
+    mailable: $mailable,
+    to: 'user@example.com',
+    idempotencyKey: 'user:123:welcome-email'
+);
+```
+
+**Benefits of using Mailables:**
+- Use familiar Laravel Mailable classes
+- Leverage Blade templates and view rendering
+- Automatic HTML-to-text conversion
+- Support for attachments
+- Full idempotency and retry logic
+- Dead-letter queue support
 
 ### 7. Monitor Health Status
 
@@ -159,6 +186,7 @@ curl https://yourdomain.com/bird-flock/health
 ```
 
 See the [Health API Integration Guide](doc/health-api-integration.md) for complete dashboard integration examples.
+
 
 ---
 
