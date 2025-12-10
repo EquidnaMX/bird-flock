@@ -19,13 +19,15 @@
     "illuminate/http": "^10 || ^11 || ^12",
     "illuminate/config": "^10 || ^11 || ^12",
     "illuminate/routing": "^10 || ^11 || ^12",
+    "illuminate/view": "^10 || ^11 || ^12",
     "symfony/uid": "^7.0",
     "psr/log": "3.0",
     "guzzlehttp/guzzle": "^7.0",
     "twilio/sdk": "^6.0",
     "sendgrid/sendgrid": "^7.0",
     "vonage/client": "^4.2",
-    "mailgun/mailgun-php": "^4.3"
+    "mailgun/mailgun-php": "^4.3",
+    "illuminate/mail": "^10 || ^11 || ^12"
   },
   "require-dev": {
     "phpunit/phpunit": "^10.0",
