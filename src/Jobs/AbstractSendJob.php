@@ -218,10 +218,29 @@ abstract class AbstractSendJob implements ShouldQueue
             return;
         }
 
+        // Check if properties are initialized before accessing them
+        try {
+            $messageId = $this->messageId;
+            $channel = $this->getChannel();
+            $payload = $this->payload;
+        } catch (\Error $e) {
+            // Properties not initialized, log error without property access
+            Logger::error('bird-flock.job.dead_letter', [
+                'job' => static::class,
+                'message_id' => 'UNINITIALIZED',
+                'channel' => 'UNKNOWN',
+                'error_code' => $errorCode,
+                'error_message' => $errorMessage,
+                'initialization_error' => $e->getMessage(),
+                'total_attempts' => $this->attempts(),
+            ]);
+            return;
+        }
+
         Logger::error('bird-flock.job.dead_letter', [
             'job' => static::class,
-            'message_id' => $this->messageId,
-            'channel' => $this->getChannel(),
+            'message_id' => $messageId,
+            'channel' => $channel,
             'error_code' => $errorCode,
             'error_message' => $errorMessage,
             'total_attempts' => $this->attempts(),
@@ -230,9 +249,9 @@ abstract class AbstractSendJob implements ShouldQueue
         /** @var DeadLetterService $service */
         $service = app(DeadLetterService::class);
         $service->record(
-            messageId: $this->messageId,
-            channel: $this->getChannel(),
-            payload: $this->payload,
+            messageId: $messageId,
+            channel: $channel,
+            payload: $payload,
             attempts: $this->attempts(),
             errorCode: $errorCode,
             errorMessage: $errorMessage,

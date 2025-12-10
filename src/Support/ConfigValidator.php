@@ -63,7 +63,6 @@ final class ConfigValidator
      * Validate Twilio credentials and From/Messaging Service configuration.
      *
      * @return void
-     * @throws \RuntimeException When TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN is missing
      */
     private function validateTwilio(): void
     {
@@ -71,7 +70,10 @@ final class ConfigValidator
         $authToken = config('bird-flock.twilio.auth_token');
 
         if (! $accountSid || ! $authToken) {
-            throw new RuntimeException('Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN.');
+            Logger::warning('bird-flock.twilio.credentials_missing', [
+                'hint' => 'Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN to enable Twilio services',
+            ]);
+            return;
         }
 
         $messagingService = config('bird-flock.twilio.messaging_service_sid');
@@ -110,7 +112,6 @@ final class ConfigValidator
      * Validate SendGrid webhook signing and From email configuration.
      *
      * @return void
-     * @throws \RuntimeException When SENDGRID_WEBHOOK_PUBLIC_KEY is missing while webhook signing is required
      */
     private function validateSendgrid(): void
     {
@@ -118,9 +119,9 @@ final class ConfigValidator
         $publicKey     = config('bird-flock.sendgrid.webhook_public_key');
 
         if ($requireSigned && ! $publicKey) {
-            throw new RuntimeException(
-                'Bird Flock requires SENDGRID_WEBHOOK_PUBLIC_KEY when signed SendGrid webhooks are enabled.'
-            );
+            Logger::warning('bird-flock.sendgrid.webhook_signing_key_missing', [
+                'hint' => 'Set SENDGRID_WEBHOOK_PUBLIC_KEY or disable SENDGRID_REQUIRE_SIGNED_WEBHOOKS',
+            ]);
         }
 
         if (! $requireSigned && ! $publicKey) {

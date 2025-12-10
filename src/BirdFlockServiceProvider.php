@@ -46,7 +46,10 @@ class BirdFlockServiceProvider extends ServiceProvider
                 $authToken  = config('bird-flock.twilio.auth_token');
 
                 if (!$accountSid || !$authToken) {
-                    throw new RuntimeException('Bird Flock Twilio credentials are not configured.');
+                    throw new RuntimeException(
+                        'Bird Flock Twilio credentials are not configured. ' .
+                        'Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.'
+                    );
                 }
 
                 // Configure HTTP timeouts via CurlClient options
@@ -70,7 +73,10 @@ class BirdFlockServiceProvider extends ServiceProvider
                 $apiKey = config('bird-flock.sendgrid.api_key');
 
                 if (!$apiKey) {
-                    throw new RuntimeException('Bird Flock SendGrid API key is not configured.');
+                    throw new RuntimeException(
+                        'Bird Flock SendGrid API key is not configured. ' .
+                        'Set SENDGRID_API_KEY environment variable.'
+                    );
                 }
 
                 $client = new SendGrid($apiKey);
@@ -95,7 +101,10 @@ class BirdFlockServiceProvider extends ServiceProvider
                 $apiSecret = config('bird-flock.vonage.api_secret');
 
                 if (!$apiKey || !$apiSecret) {
-                    throw new RuntimeException('Bird Flock Vonage credentials are not configured.');
+                    throw new RuntimeException(
+                        'Bird Flock Vonage credentials are not configured. ' .
+                        'Set VONAGE_API_KEY and VONAGE_API_SECRET environment variables.'
+                    );
                 }
 
                 $credentials = new \Vonage\Client\Credentials\Basic($apiKey, $apiSecret);
@@ -111,7 +120,10 @@ class BirdFlockServiceProvider extends ServiceProvider
                 $apiKey = config('bird-flock.mailgun.api_key');
 
                 if (!$apiKey) {
-                    throw new RuntimeException('Bird Flock Mailgun API key is not configured.');
+                    throw new RuntimeException(
+                        'Bird Flock Mailgun API key is not configured. ' .
+                        'Set MAILGUN_API_KEY environment variable.'
+                    );
                 }
 
                 $endpoint = config('bird-flock.mailgun.endpoint', 'api.mailgun.net');
