@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### ✨ Added
+
+- **Laravel Mailable Support**: Send Laravel Mailable classes through Bird Flock
+  - New `BirdFlock::dispatchMailable()` method for easy Mailable dispatching
+  - `MailableConverter` class converts Mailables to FlightPlan DTOs
+  - Automatic HTML-to-text conversion for plain text fallback
+  - Support for Blade template rendering
+  - Attachment support with base64 encoding
+  - Full idempotency, retry logic, and DLQ support for Mailables
+  - Added `illuminate/mail` and `illuminate/view` dependencies
+  - Comprehensive documentation in `doc/mailable-usage.md`
+  - Complete working examples in `doc/examples/` directory
+
 ## [1.0.0] - 2025-11-30 - "Phoenix"
 
 ### 🎉 Initial Stable Release

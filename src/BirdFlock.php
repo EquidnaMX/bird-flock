@@ -25,8 +25,11 @@ use Equidna\BirdFlock\Events\MessageQueued;
 use Equidna\BirdFlock\Events\MessageRetryScheduled;
 use Equidna\BirdFlock\Jobs\DispatchMessageJob;
 use Equidna\BirdFlock\Support\Logger;
+use Equidna\BirdFlock\Support\MailableConverter;
 use Equidna\BirdFlock\Support\Masking;
 use Equidna\BirdFlock\Support\MetricsCollector;
+use Illuminate\Contracts\Mail\Mailable as MailableContract;
+use Illuminate\Mail\Mailable;
 
 /**
  * Orchestrates message dispatching with idempotency and routing.
@@ -347,5 +350,42 @@ final class BirdFlock
         }
 
         return $messageIds;
+    }
+
+    /**
+     * Dispatch a Laravel Mailable for sending.
+     *
+     * @param  Mailable|MailableContract               $mailable        Laravel Mailable instance.
+     * @param  string                                  $to              Recipient email address.
+     * @param  string|null                             $idempotencyKey  Optional idempotency key.
+     * @param  \DateTimeInterface|null                 $sendAt          Optional scheduled send time.
+     * @param  array<string, mixed>                    $metadata        Additional metadata.
+     * @param  OutboundMessageRepositoryInterface|null $repository      Optional repository (useful for tests).
+     * @return string                                                   Message identifier.
+     * @throws \RuntimeException                                        When payload exceeds maximum size.
+     */
+    public static function dispatchMailable(
+        Mailable|MailableContract $mailable,
+        string $to,
+        ?string $idempotencyKey = null,
+        ?\DateTimeInterface $sendAt = null,
+        array $metadata = [],
+        ?OutboundMessageRepositoryInterface $repository = null
+    ): string {
+        Logger::info('bird-flock.dispatch.mailable_received', [
+            'to' => Masking::maskEmail($to),
+            'mailable_class' => get_class($mailable),
+            'idempotency_key' => $idempotencyKey,
+        ]);
+
+        $flightPlan = MailableConverter::convert(
+            mailable: $mailable,
+            to: $to,
+            idempotencyKey: $idempotencyKey,
+            sendAt: $sendAt,
+            metadata: $metadata
+        );
+
+        return self::dispatch($flightPlan, $repository);
     }
 }
