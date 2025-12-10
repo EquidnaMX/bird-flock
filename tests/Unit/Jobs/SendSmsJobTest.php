@@ -177,4 +177,24 @@ final class SendSmsJobTest extends TestCase
         // Job should complete without retry/release
         $this->assertTrue(true);
     }
+
+    public function testFailedMethodHandlesUninitializedProperties(): void
+    {
+        // This test simulates the scenario where the job's failed() method is called
+        // before the constructor completes or during deserialization errors.
+        // The fix should prevent the "Typed property must not be accessed before initialization" error.
+
+        // Create an uninitialized job instance using reflection
+        $reflection = new \ReflectionClass(SendSmsJob::class);
+        $job = $reflection->newInstanceWithoutConstructor();
+
+        // The failed() method should not throw an error even with uninitialized properties
+        $exception = new \Exception('Test exception');
+        
+        // This should not throw a "Typed property must not be accessed before initialization" error
+        $job->failed($exception);
+
+        // If we get here, the fix is working
+        $this->assertTrue(true);
+    }
 }
