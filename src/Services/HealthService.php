@@ -161,7 +161,8 @@ final class HealthService
 
         if ($state === 'half_open') {
             $details['status_message'] = 'Testing recovery - allowing trial requests';
-            $details['trials_remaining'] = max(0, 3 - $trialCount);
+            $maxTrials = 3; // Default from CircuitBreaker::$maxTrials
+            $details['trials_remaining'] = max(0, $maxTrials - $trialCount);
         } elseif ($state === 'open') {
             $details['status_message'] = 'Circuit open - blocking requests to protect service';
         } else {
