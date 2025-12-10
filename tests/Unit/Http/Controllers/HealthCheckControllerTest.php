@@ -13,19 +13,28 @@
 namespace Equidna\BirdFlock\Tests\Unit\Http\Controllers;
 
 use Equidna\BirdFlock\Http\Controllers\HealthCheckController;
+use Equidna\BirdFlock\Services\HealthService;
 use Equidna\BirdFlock\Tests\TestCase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Mockery;
 
 final class HealthCheckControllerTest extends TestCase
 {
     public function testHealthCheckReturnsHealthyWhenAllServicesUp(): void
     {
-        // Mock database connection
-        DB::shouldReceive('connection->getPdo')->andReturn(true);
-        DB::shouldReceive('getSchemaBuilder->hasTable')->andReturn(true);
+        $healthService = Mockery::mock(HealthService::class);
+        $healthService->shouldReceive('getHealthStatus')->andReturn([
+            'status' => 'healthy',
+            'version' => '1.0.0',
+            'checks' => [
+                'database' => ['healthy' => true, 'message' => 'OK'],
+            ],
+            'metrics' => [],
+            'timestamp' => '2025-12-10T00:00:00Z',
+        ]);
 
-        $controller = new HealthCheckController();
+        $controller = new HealthCheckController($healthService);
         $response = $controller->check();
 
         $this->assertSame(200, $response->getStatusCode());
@@ -37,10 +46,18 @@ final class HealthCheckControllerTest extends TestCase
 
     public function testHealthCheckReturnsDegradedWhenDatabaseFails(): void
     {
-        // Mock database failure
-        DB::shouldReceive('connection->getPdo')->andThrow(new \Exception('Connection failed'));
+        $healthService = Mockery::mock(HealthService::class);
+        $healthService->shouldReceive('getHealthStatus')->andReturn([
+            'status' => 'degraded',
+            'version' => '1.0.0',
+            'checks' => [
+                'database' => ['healthy' => false, 'message' => 'Connection failed'],
+            ],
+            'metrics' => [],
+            'timestamp' => '2025-12-10T00:00:00Z',
+        ]);
 
-        $controller = new HealthCheckController();
+        $controller = new HealthCheckController($healthService);
         $response = $controller->check();
 
         $this->assertSame(503, $response->getStatusCode());
@@ -51,22 +68,26 @@ final class HealthCheckControllerTest extends TestCase
 
     public function testHealthCheckIncludesCircuitBreakerStates(): void
     {
-        // Mock database and schema
-        DB::shouldReceive('connection->getPdo')->andReturn(true);
-        DB::shouldReceive('getSchemaBuilder->hasTable')->andReturn(true);
+        $healthService = Mockery::mock(HealthService::class);
+        $healthService->shouldReceive('getHealthStatus')->andReturn([
+            'status' => 'healthy',
+            'version' => '1.0.0',
+            'checks' => [
+                'circuits' => [
+                    'healthy' => true,
+                    'message' => 'All circuits closed',
+                    'states' => [
+                        'twilio_sms' => 'closed',
+                        'twilio_whatsapp' => 'closed',
+                        'sendgrid_email' => 'closed',
+                    ],
+                ],
+            ],
+            'metrics' => [],
+            'timestamp' => '2025-12-10T00:00:00Z',
+        ]);
 
-        // Set up cache for circuit states
-        Cache::shouldReceive('get')
-            ->with('circuit_breaker:twilio_sms:state', 'closed')
-            ->andReturn('closed');
-        Cache::shouldReceive('get')
-            ->with('circuit_breaker:twilio_whatsapp:state', 'closed')
-            ->andReturn('closed');
-        Cache::shouldReceive('get')
-            ->with('circuit_breaker:sendgrid_email:state', 'closed')
-            ->andReturn('closed');
-
-        $controller = new HealthCheckController();
+        $controller = new HealthCheckController($healthService);
         $response = $controller->check();
 
         $data = $response->getData(true);
@@ -78,21 +99,26 @@ final class HealthCheckControllerTest extends TestCase
 
     public function testHealthCheckDetectsOpenCircuit(): void
     {
-        DB::shouldReceive('connection->getPdo')->andReturn(true);
-        DB::shouldReceive('getSchemaBuilder->hasTable')->andReturn(true);
+        $healthService = Mockery::mock(HealthService::class);
+        $healthService->shouldReceive('getHealthStatus')->andReturn([
+            'status' => 'degraded',
+            'version' => '1.0.0',
+            'checks' => [
+                'circuits' => [
+                    'healthy' => false,
+                    'message' => 'One or more circuits not closed',
+                    'states' => [
+                        'twilio_sms' => 'open',
+                        'twilio_whatsapp' => 'closed',
+                        'sendgrid_email' => 'closed',
+                    ],
+                ],
+            ],
+            'metrics' => [],
+            'timestamp' => '2025-12-10T00:00:00Z',
+        ]);
 
-        // One circuit is open
-        Cache::shouldReceive('get')
-            ->with('circuit_breaker:twilio_sms:state', 'closed')
-            ->andReturn('open');
-        Cache::shouldReceive('get')
-            ->with('circuit_breaker:twilio_whatsapp:state', 'closed')
-            ->andReturn('closed');
-        Cache::shouldReceive('get')
-            ->with('circuit_breaker:sendgrid_email:state', 'closed')
-            ->andReturn('closed');
-
-        $controller = new HealthCheckController();
+        $controller = new HealthCheckController($healthService);
         $response = $controller->check();
 
         $this->assertSame(503, $response->getStatusCode());
@@ -104,15 +130,21 @@ final class HealthCheckControllerTest extends TestCase
 
     public function testHealthCheckValidatesTwilioConfig(): void
     {
-        DB::shouldReceive('connection->getPdo')->andReturn(true);
-        DB::shouldReceive('getSchemaBuilder->hasTable')->andReturn(true);
-
-        config([
-            'bird-flock.twilio.account_sid' => null,
-            'bird-flock.twilio.auth_token' => 'test',
+        $healthService = Mockery::mock(HealthService::class);
+        $healthService->shouldReceive('getHealthStatus')->andReturn([
+            'status' => 'degraded',
+            'version' => '1.0.0',
+            'checks' => [
+                'twilio' => [
+                    'healthy' => false,
+                    'message' => 'Twilio credentials not configured',
+                ],
+            ],
+            'metrics' => [],
+            'timestamp' => '2025-12-10T00:00:00Z',
         ]);
 
-        $controller = new HealthCheckController();
+        $controller = new HealthCheckController($healthService);
         $response = $controller->check();
 
         $data = $response->getData(true);
@@ -122,14 +154,21 @@ final class HealthCheckControllerTest extends TestCase
 
     public function testHealthCheckValidatesSendgridConfig(): void
     {
-        DB::shouldReceive('connection->getPdo')->andReturn(true);
-        DB::shouldReceive('getSchemaBuilder->hasTable')->andReturn(true);
-
-        config([
-            'bird-flock.sendgrid.api_key' => null,
+        $healthService = Mockery::mock(HealthService::class);
+        $healthService->shouldReceive('getHealthStatus')->andReturn([
+            'status' => 'degraded',
+            'version' => '1.0.0',
+            'checks' => [
+                'sendgrid' => [
+                    'healthy' => false,
+                    'message' => 'SendGrid API key not configured',
+                ],
+            ],
+            'metrics' => [],
+            'timestamp' => '2025-12-10T00:00:00Z',
         ]);
 
-        $controller = new HealthCheckController();
+        $controller = new HealthCheckController($healthService);
         $response = $controller->check();
 
         $data = $response->getData(true);
