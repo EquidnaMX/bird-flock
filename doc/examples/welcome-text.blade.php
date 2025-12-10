@@ -16,4 +16,4 @@ Best regards,
 The Bird Flock Team
 
 ---
-© 2024 Bird Flock. All rights reserved.
+© {{ date('Y') }} Bird Flock. All rights reserved.

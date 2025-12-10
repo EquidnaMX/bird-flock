@@ -67,7 +67,7 @@
         The Bird Flock Team</p>
     </div>
     <div class="footer">
-        <p>© 2024 Bird Flock. All rights reserved.</p>
+        <p>© {{ date('Y') }} Bird Flock. All rights reserved.</p>
     </div>
 </body>
 </html>
