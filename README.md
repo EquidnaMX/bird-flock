@@ -124,6 +124,42 @@ $plan = new FlightPlan(
 $messageId = BirdFlock::dispatch($plan);
 ```
 
+### 7. Monitor Health Status
+
+**For Centralized Dashboards**:
+
+```php
+use Equidna\BirdFlock\Services\HealthService;
+
+class DashboardController extends Controller
+{
+    public function __construct(private HealthService $healthService)
+    {
+    }
+
+    public function index()
+    {
+        // Get complete health status
+        $health = $this->healthService->getHealthStatus();
+        
+        // Check if system is healthy
+        if ($health['status'] !== 'healthy') {
+            // Alert on degraded status
+        }
+        
+        return view('dashboard', compact('health'));
+    }
+}
+```
+
+**Or via HTTP endpoint**:
+
+```bash
+curl https://yourdomain.com/bird-flock/health
+```
+
+See the [Health API Integration Guide](doc/health-api-integration.md) for complete dashboard integration examples.
+
 ---
 
 ## Documentation Index
@@ -150,6 +186,9 @@ Detailed guides and references:
 
 - **[Monitoring](doc/monitoring.md)**  
   Logging, metrics, health checks, troubleshooting, recommended alerts
+
+- **[Health API Integration](doc/health-api-integration.md)**  
+  Guide for integrating Bird Flock health monitoring into centralized dashboards
 
 - **[Business Logic & Core Processes](doc/business-logic-and-core-processes.md)**  
   Message dispatch flow, idempotency, retry logic, dead-letter handling, webhook processing
