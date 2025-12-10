@@ -13,78 +13,24 @@
 namespace Equidna\BirdFlock\Tests\Unit\Support;
 
 use Equidna\BirdFlock\Support\MailableConverter;
+use Equidna\BirdFlock\Tests\Support\SetsUpViewFactory;
 use Equidna\BirdFlock\Tests\TestCase;
-use Illuminate\Config\Repository;
-use Illuminate\Container\Container;
-use Illuminate\Filesystem\Filesystem;
 use Illuminate\Mail\Mailable;
-use Illuminate\Support\Facades\View;
-use Illuminate\View\Compilers\BladeCompiler;
-use Illuminate\View\Engines\CompilerEngine;
-use Illuminate\View\Engines\EngineResolver;
-use Illuminate\View\Factory;
-use Illuminate\View\FileViewFinder;
 
 final class MailableConverterTest extends TestCase
 {
-    private string $tempViewPath;
+    use SetsUpViewFactory;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        // Create a temporary directory for views
-        $this->tempViewPath = sys_get_temp_dir() . '/bird-flock-test-views-' . uniqid();
-        mkdir($this->tempViewPath, 0777, true);
-
-        // Set up view factory
-        $this->setupViewFactory();
+        $this->setUpViewFactory();
     }
 
     protected function tearDown(): void
     {
-        // Clean up temporary views
-        if (is_dir($this->tempViewPath)) {
-            $files = glob($this->tempViewPath . '/*');
-            foreach ($files as $file) {
-                if (is_file($file)) {
-                    unlink($file);
-                }
-            }
-            rmdir($this->tempViewPath);
-        }
-
+        $this->tearDownViewFactory();
         parent::tearDown();
-    }
-
-    private function setupViewFactory(): void
-    {
-        $container = Container::getInstance();
-        $filesystem = new Filesystem();
-        
-        // Set up view finder
-        $finder = new FileViewFinder($filesystem, [$this->tempViewPath]);
-        
-        // Set up engine resolver
-        $resolver = new EngineResolver();
-        
-        // Add PHP engine
-        $resolver->register('php', function () {
-            return new \Illuminate\View\Engines\PhpEngine(new Filesystem());
-        });
-        
-        // Create view factory
-        $factory = new Factory($resolver, $finder, new \Illuminate\Events\Dispatcher($container));
-        
-        // Register view factory in container and facade
-        $container->instance('view', $factory);
-        View::setFacadeApplication($container);
-        View::swap($factory);
-    }
-
-    private function createView(string $name, string $content): void
-    {
-        file_put_contents($this->tempViewPath . '/' . $name . '.php', $content);
     }
 
     public function testConvertMailableWithHtmlView(): void
