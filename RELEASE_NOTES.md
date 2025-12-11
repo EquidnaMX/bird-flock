@@ -1,12 +1,12 @@
-# 🎉 Release v1.0.0 - "Phoenix"
+# 🎉 Release v1.1.0 - "Albatross"
 
-## First Stable Release
+## Mailables Support Release
 
-This is the inaugural stable release of **Bird Flock**, a production-ready multi-channel messaging bus for Laravel applications.
+This release adds first-class support for **Laravel Mailables**, enabling teams to use familiar Mailable classes while benefiting from Bird Flock's reliability features (idempotency, retries, circuit breakers, DLQ).
 
-**Release Date**: November 30, 2025  
-**Codename**: Phoenix  
-**Version**: 1.0.0
+**Release Date**: December 11, 2025  
+**Codename**: Albatross  
+**Version**: 1.1.0
 
 ---
 
@@ -16,6 +16,7 @@ Bird Flock is a comprehensive Laravel package that orchestrates reliable outboun
 
 ### Key Highlights
 
+✅ **Mailables Support**: Dispatch Laravel Mailables via `BirdFlock::dispatchMailable()`  
 ✅ **Multi-Channel Support**: SMS (Twilio, Vonage), WhatsApp (Twilio), Email (SendGrid, Mailgun)  
 ✅ **Production-Ready**: Circuit breakers, DLQ, exponential backoff, comprehensive error handling  
 ✅ **Developer-Friendly**: Simple API, extensive documentation, CLI commands for testing  
@@ -38,24 +39,29 @@ php artisan migrate
 ## 🎯 Core Features
 
 ### Messaging Capabilities
+
+- **Laravel Mailables**: Use Mailables with full Bird Flock reliability
 - **Idempotency**: Prevent duplicate sends with unique keys
 - **Batch Dispatch**: Send up to thousands of messages efficiently
 - **Scheduled Delivery**: Schedule messages for future delivery
 - **Multi-Provider**: Seamlessly switch between Twilio, SendGrid, Vonage, Mailgun
 
 ### Reliability Features
+
 - **Circuit Breakers**: Automatic provider failure detection and fail-fast
 - **Dead-Letter Queue**: Capture failed messages for manual replay
 - **Exponential Backoff**: Intelligent retry with jitter (1s–60s)
 - **Webhook Processing**: Automatic status updates from provider callbacks
 
 ### Developer Tools
+
 - 6 Artisan commands for testing and management
 - 2 health check endpoints
 - 8 webhook endpoints with rate limiting
 - Comprehensive event system for extensibility
 
 ### Observability
+
 - PII-masked structured logging
 - Metrics collection interface
 - Circuit breaker status monitoring
@@ -65,10 +71,10 @@ php artisan migrate
 
 ## 📝 Documentation
 
-This release includes **comprehensive documentation** (9 detailed guides):
+This release includes **comprehensive documentation** (10+ detailed guides):
 
-- **[CHANGELOG.md](CHANGELOG.md)** - Complete project history ✨ NEW
-- **[BREAKING_CHANGES.md](BREAKING_CHANGES.md)** - Breaking changes guide ✨ NEW
+- **[CHANGELOG.md](CHANGELOG.md)** - Complete project history
+- **[BREAKING_CHANGES.md](BREAKING_CHANGES.md)** - Breaking changes guide
 - [Deployment Instructions](doc/deployment-instructions.md)
 - [API Documentation](doc/api-documentation.md)
 - [Routes Documentation](doc/routes-documentation.md)
@@ -78,37 +84,37 @@ This release includes **comprehensive documentation** (9 detailed guides):
 - [Monitoring Guide](doc/monitoring.md)
 - [Tests Documentation](doc/tests-documentation.md)
 - [Open Questions & Assumptions](doc/open-questions-and-assumptions.md)
+- **[Mailable Usage](doc/mailable-usage.md)** ✨ NEW — End-to-end guide for Mailables, with examples in `doc/examples/`
 
 ---
 
 ## 🔧 What's Included
 
-### Files Added in This Release
-- ✨ `CHANGELOG.md` - Authoritative changelog (MUST be respected by all AI agents)
-- ✨ `BREAKING_CHANGES.md` - Breaking changes documentation and migration guides
-- ✨ `RELEASE_NOTES.md` - This file
+### Files Added/Updated in This Release
+
+- ✨ `doc/mailable-usage.md` — Comprehensive Mailables guide
+- ✨ `doc/examples/` — Working example Mailable, templates, usage script
+- ✨ `CHANGELOG.md` — Updated for v1.1.0 (Albatross)
+- ✨ `RELEASE_NOTES.md` — This file updated for v1.1.0
 
 ### Version Updates
-- ✨ `composer.json` - Added `"version": "1.0.0"`
 
-### Recent Bug Fixes (Included)
-- 🐛 Fixed `DispatchMessageJob` delay calculation (milliseconds → seconds conversion)
-- 💅 Complete PHPDoc standardization across 48+ files
-- 🔒 Enabled webhook signature validation by default
-- 🔒 Replaced `Cache::forever()` with TTL-based caching
+- ✨ `composer.json` — Version remains aligned to tags (update when tagging)
+
+### Recent Additions
+
+- ✨ Mailables conversion pipeline and dispatch API
 
 ---
 
 ## 🎨 Code Quality Improvements
 
 ### PHPDoc Standardization
-- ✅ File-level DocBlocks added to all 48+ PHP files
-- ✅ Aligned all PHPDoc tags per PHPDocStyle.instructions.md
-- ✅ Added missing `@throws` documentation
-- ✅ Fixed constructor DocBlocks for promoted properties
-- ✅ PHPStan errors reduced from 26 → 13
+
+- ✅ Continued adherence to PHPDocStyle.instructions.md across new files
 
 ### Code Style
+
 - ✅ Consistent trailing commas in multi-line constructs
 - ✅ Anonymous class spacing normalization
 - ✅ Empty constructor body formatting fixes
@@ -117,10 +123,7 @@ This release includes **comprehensive documentation** (9 detailed guides):
 
 ## 🔐 Security Enhancements
 
-- ✅ Webhook signature validation enabled by default for all providers
-- ✅ PII masking in all log statements (phone numbers, email addresses)
-- ✅ Circuit breaker cache TTL (24 hours) to prevent cache bloat
-- ✅ Rate limiting on webhook endpoints (60 requests/min per IP)
+No changes since v1.0.0.
 
 ---
 
@@ -137,6 +140,7 @@ This release includes **comprehensive documentation** (9 detailed guides):
 ## 🚦 Testing
 
 ### Unit Test Coverage
+
 - ✅ Core dispatch logic and idempotency
 - ✅ Circuit breaker behavior (including concurrency tests)
 - ✅ Job processing and retry logic
@@ -149,6 +153,7 @@ This release includes **comprehensive documentation** (9 detailed guides):
 **Test Speed**: < 100ms per test
 
 Run tests:
+
 ```bash
 ./vendor/bin/phpunit
 ```
@@ -158,6 +163,7 @@ Run tests:
 ## 📦 Dependencies
 
 ### Production Dependencies
+
 - Laravel Framework 11.x (Illuminate 10.x–12.x supported)
 - Symfony UID 7.x
 - Guzzle HTTP 7.x
@@ -167,6 +173,7 @@ Run tests:
 - Mailgun PHP 4.3+
 
 ### Development Dependencies
+
 - PHPUnit 10.x
 - PHPStan 1.10+
 - PHP_CodeSniffer 4.x
@@ -206,6 +213,7 @@ Organization: Equidna
 Thank you for using Bird Flock! We're excited to see what you build with it.
 
 For issues, questions, or contributions:
+
 - GitHub Issues: https://github.com/EquidnaMX/bird-flock/issues
 - Email: gruelas@gruelas.com
 

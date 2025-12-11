@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+No unreleased changes at this time.
+
+## [1.1.0] - 2025-12-11 - "Albatross"
+
 ### ✨ Added
 
 - **Laravel Mailable Support**: Send Laravel Mailable classes through Bird Flock
