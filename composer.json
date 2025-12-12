@@ -1,6 +1,6 @@
 {
   "name": "equidna/bird-flock",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Bird Flock - messaging bus for multi-channel outbound messaging (SMS, WhatsApp, Email) with DLQ and idempotency",
   "type": "library",
   "license": "MIT",
