@@ -41,7 +41,7 @@ This documentation follows the project's Coding Standards and PHPDoc Style Guide
 **Tech Stack**:
 
 - **PHP**: 8.3+
-- **Laravel Framework**: 11.x (supports Illuminate components 10.x–12.x)
+- **Laravel Framework**: 10.x–12.x (supports Illuminate components 10.x–12.x)
 - **Database**: MySQL, PostgreSQL, SQLite (Eloquent-based; driver-agnostic)
 - **Cache**: Any Laravel-supported driver (Redis, Memcached, File, etc.)
 - **Queue**: Any Laravel queue driver (Redis, Database, SQS, Beanstalkd, etc.)
@@ -144,6 +144,7 @@ $messageId = BirdFlock::dispatchMailable(
 ```
 
 **Benefits of using Mailables:**
+
 - Use familiar Laravel Mailable classes
 - Leverage Blade templates and view rendering
 - Automatic HTML-to-text conversion
@@ -168,12 +169,12 @@ class DashboardController extends Controller
     {
         // Get complete health status
         $health = $this->healthService->getHealthStatus();
-        
+
         // Check if system is healthy
         if ($health['status'] !== 'healthy') {
             // Alert on degraded status
         }
-        
+
         return view('dashboard', compact('health'));
     }
 }
@@ -186,7 +187,6 @@ curl https://yourdomain.com/bird-flock/health
 ```
 
 See the [Health API Integration Guide](doc/health-api-integration.md) for complete dashboard integration examples.
-
 
 ---
 

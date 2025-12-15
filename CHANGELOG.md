@@ -13,6 +13,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes at this time.
 
+## [1.2.0] - 2025-12-15 - "Condor"
+
+### Added
+
+- Official compatibility with Laravel 12.x.
+
+### Changed
+
+- Widened Composer constraints to allow `laravel/framework ^10 || ^11 || ^12` and `illuminate/database ^10 || ^11 || ^12`.
+- Updated README to state support for Laravel 10–12.
+
+### Fixed
+
+- Documentation consistency around supported framework versions.
+
+### Security
+
+- No security-related changes in this release.
+
+### Breaking Changes
+
+- None. This is a backward-compatible compatibility update.
+
 ## [1.1.0] - 2025-12-11 - "Albatross"
 
 ### ✨ Added
@@ -318,3 +341,5 @@ All future releases MUST follow this structure:
 ---
 
 [1.0.0]: https://github.com/EquidnaMX/bird-flock/releases/tag/v1.0.0
+[1.1.0]: https://github.com/EquidnaMX/bird-flock/releases/tag/v1.1.0
+[1.2.0]: https://github.com/EquidnaMX/bird-flock/releases/tag/v1.2.0

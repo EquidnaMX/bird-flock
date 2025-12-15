@@ -175,8 +175,10 @@ public function createFromArray(array $data): FlightPlan
 ## Version Compatibility Matrix
 
 | Bird Flock Version | PHP Version | Laravel Version | Breaking Changes |
-| ------------------ | ----------- | --------------- | ---------------- |
+| ------------------ | ----------- | --------------- | ---------------- | --- | --- | --- | ---- |
 | 1.0.0 (Phoenix)    | ≥8.3        | ^11.0           | None (initial)   |
+| 1.1.0 (Albatross)  | ≥8.3        | ^11.0           | None             |
+| 1.2.0 (Condor)     | ≥8.3        | ^10             |                  | ^11 |     | ^12 | None |
 
 ---
 
