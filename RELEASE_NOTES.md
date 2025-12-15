@@ -1,50 +1,31 @@
-# 🎉 Release v1.1.0 - "Albatross"
+# Release v1.2.0 "Condor"
 
-## Mailables Support Release
+Bird Flock now officially supports Laravel 12.x while remaining compatible with Laravel 10.x and 11.x. This release widens Composer constraints and updates documentation to reflect broader framework support. No breaking changes.
 
-This release adds first-class support for **Laravel Mailables**, enabling teams to use familiar Mailable classes while benefiting from Bird Flock's reliability features (idempotency, retries, circuit breakers, DLQ).
-
-**Release Date**: December 11, 2025  
-**Codename**: Albatross  
-**Version**: 1.1.0
+**Release Date**: December 15, 2025  
+**Codename**: Condor  
+**Version**: 1.2.0
 
 ---
 
-## 🚀 What is Bird Flock?
+## Highlights
 
-Bird Flock is a comprehensive Laravel package that orchestrates reliable outbound messaging across SMS, WhatsApp, and Email channels. It provides enterprise-grade features including idempotency, circuit breakers, dead-letter queues, and automatic retry handling.
-
-### Key Highlights
-
-✅ **Mailables Support**: Dispatch Laravel Mailables via `BirdFlock::dispatchMailable()`  
-✅ **Multi-Channel Support**: SMS (Twilio, Vonage), WhatsApp (Twilio), Email (SendGrid, Mailgun)  
-✅ **Production-Ready**: Circuit breakers, DLQ, exponential backoff, comprehensive error handling  
-✅ **Developer-Friendly**: Simple API, extensive documentation, CLI commands for testing  
-✅ **Observable**: Structured logging, metrics collection, health check endpoints  
-✅ **Secure**: Webhook signature validation, PII masking, HTTPS enforcement  
-✅ **Well-Tested**: 75-85% unit test coverage with PHPUnit 10.x
+- Laravel 12 compatibility
+- Composer constraints widened for `laravel/framework` and `illuminate/database`
+- README updated to state Laravel 10–12 support
 
 ---
 
-## 📦 Installation
+## Added
 
-```bash
-composer require equidna/bird-flock
-php artisan vendor:publish --tag=bird-flock-config
-php artisan migrate
-```
+- Official compatibility with Laravel 12.x.
 
 ---
 
-## 🎯 Core Features
+## Changed
 
-### Messaging Capabilities
-
-- **Laravel Mailables**: Use Mailables with full Bird Flock reliability
-- **Idempotency**: Prevent duplicate sends with unique keys
-- **Batch Dispatch**: Send up to thousands of messages efficiently
-- **Scheduled Delivery**: Schedule messages for future delivery
-- **Multi-Provider**: Seamlessly switch between Twilio, SendGrid, Vonage, Mailgun
+- Composer constraints: `laravel/framework ^10 || ^11 || ^12`, `illuminate/database ^10 || ^11 || ^12`.
+- Documentation updated for supported versions.
 
 ### Reliability Features
 
@@ -107,33 +88,22 @@ This release includes **comprehensive documentation** (10+ detailed guides):
 
 ---
 
-## 🎨 Code Quality Improvements
+## Fixed
 
-### PHPDoc Standardization
-
-- ✅ Continued adherence to PHPDocStyle.instructions.md across new files
-
-### Code Style
-
-- ✅ Consistent trailing commas in multi-line constructs
-- ✅ Anonymous class spacing normalization
-- ✅ Empty constructor body formatting fixes
+- Consistency in documentation around framework versions.
 
 ---
 
-## 🔐 Security Enhancements
+## Security
 
-No changes since v1.0.0.
+No changes.
 
 ---
 
-## 📋 System Requirements
+## Links
 
-- **PHP**: 8.3 or higher
-- **Laravel**: 11.x
-- **Database**: MySQL 5.7+, PostgreSQL 11+, or SQLite 3.26+
-- **Cache**: Any Laravel-supported driver (Redis recommended)
-- **Queue**: Any Laravel queue driver (Redis recommended)
+- See CHANGELOG for full history: CHANGELOG.md
+- Migration guidance (breaking changes): BREAKING_CHANGES.md
 
 ---
 
