@@ -48,7 +48,7 @@ class BirdFlockServiceProvider extends ServiceProvider
                 if (!$accountSid || !$authToken) {
                     throw new RuntimeException(
                         'Bird Flock Twilio credentials are not configured. ' .
-                        'Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.'
+                            'Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.'
                     );
                 }
 
@@ -75,7 +75,7 @@ class BirdFlockServiceProvider extends ServiceProvider
                 if (!$apiKey) {
                     throw new RuntimeException(
                         'Bird Flock SendGrid API key is not configured. ' .
-                        'Set SENDGRID_API_KEY environment variable.'
+                            'Set SENDGRID_API_KEY environment variable.'
                     );
                 }
 
@@ -103,7 +103,7 @@ class BirdFlockServiceProvider extends ServiceProvider
                 if (!$apiKey || !$apiSecret) {
                     throw new RuntimeException(
                         'Bird Flock Vonage credentials are not configured. ' .
-                        'Set VONAGE_API_KEY and VONAGE_API_SECRET environment variables.'
+                            'Set VONAGE_API_KEY and VONAGE_API_SECRET environment variables.'
                     );
                 }
 
@@ -122,11 +122,11 @@ class BirdFlockServiceProvider extends ServiceProvider
                 if (!$apiKey) {
                     throw new RuntimeException(
                         'Bird Flock Mailgun API key is not configured. ' .
-                        'Set MAILGUN_API_KEY environment variable.'
+                            'Set MAILGUN_API_KEY environment variable.'
                     );
                 }
 
-                $endpoint = config('bird-flock.mailgun.endpoint', 'api.mailgun.net');
+                $endpoint = config('bird-flock.mailgun.endpoint', 'https://api.mailgun.net');
                 $client = \Mailgun\Mailgun::create($apiKey, $endpoint);
 
                 return $client;

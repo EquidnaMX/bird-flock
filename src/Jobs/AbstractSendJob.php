@@ -44,6 +44,8 @@ abstract class AbstractSendJob implements ShouldQueue
     private int $baseDelayMs;
     private int $maxDelayMs;
     private float $startTime;
+    protected string $messageId;
+    protected FlightPlan $payload;
 
     /**
      * Creates a new send job instance.
@@ -51,15 +53,17 @@ abstract class AbstractSendJob implements ShouldQueue
      * @param string     $messageId Message identifier.
      * @param FlightPlan $payload   Message payload.
      */
-    public function __construct(
-        private readonly string $messageId,
-        private readonly FlightPlan $payload,
-    ) {
+    public function __construct(string $messageId, FlightPlan $payload)
+    {
+        $this->messageId = $messageId;
+        $this->payload = $payload;
+
         $config = config("bird-flock.retry.channels.{$this->getChannel()}", []);
         $this->tries = (int) ($config['max_attempts'] ?? $this->tries);
         $this->baseDelayMs = (int) ($config['base_delay_ms'] ?? 1000);
         $this->maxDelayMs = (int) ($config['max_delay_ms'] ?? 60000);
     }
+
 
     /**
      * Returns the channel name for this job.
