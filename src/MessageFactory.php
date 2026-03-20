@@ -15,9 +15,11 @@ namespace Equidna\BirdFlock;
 use SendGrid;
 use Twilio\Rest\Client as TwilioClient;
 use Equidna\BirdFlock\Contracts\MessageSenderInterface;
+use Equidna\BirdFlock\Senders\MailgunEmailSender;
 use Equidna\BirdFlock\Senders\SendgridEmailSender;
 use Equidna\BirdFlock\Senders\TwilioSmsSender;
 use Equidna\BirdFlock\Senders\TwilioWhatsappSender;
+use Mailgun\Mailgun;
 
 /**
  * Creates sender instances based on configuration.
@@ -38,7 +40,7 @@ final class MessageFactory
         return match ($channel) {
             'sms' => self::createTwilioSmsSender(),
             'whatsapp' => self::createTwilioWhatsappSender(),
-            'email' => self::createSendgridEmailSender(),
+            'email' => self::createMailgunEmailSender(),
             default => throw new \InvalidArgumentException("Unsupported channel: {$channel}"),
         };
     }
@@ -94,6 +96,21 @@ final class MessageFactory
             fromName: config('bird-flock.sendgrid.from_name'),
             replyTo: config('bird-flock.sendgrid.reply_to'),
             templates: config('bird-flock.sendgrid.templates', []),
+        );
+    }
+
+    private static function createMailgunEmailSender(): MailgunEmailSender
+    {
+        /** @var Mailgun $client */
+        $client = app(Mailgun::class);
+
+        return new MailgunEmailSender(
+            client: $client,
+            domain: config('bird-flock.mailgun.domain'),
+            fromEmail: config('bird-flock.mailgun.from_email'),
+            fromName: config('bird-flock.mailgun.from_name'),
+            replyTo: config('bird-flock.mailgun.reply_to'),
+            templates: config('bird-flock.mailgun.templates', []),
         );
     }
 }
