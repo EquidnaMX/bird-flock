@@ -151,6 +151,86 @@ final class MailableConverterTest extends TestCase
         $this->assertSame('welcome', $flightPlan->metadata['campaign']);
     }
 
+    public function testConvertMailableWithEmbeddedFile(): void
+    {
+        $imagePath = sys_get_temp_dir() . '/bird-flock-logo-' . uniqid() . '.png';
+        file_put_contents($imagePath, 'image-bytes');
+
+        $this->createView(
+            'embedded-file',
+            '<img src="<?php echo $message->embed($imagePath); ?>" alt="Logo">'
+        );
+
+        $mailable = new class ($imagePath) extends Mailable {
+            public function __construct(private readonly string $imagePath)
+            {
+            }
+
+            public function build()
+            {
+                return $this->view('embedded-file')
+                    ->subject('Embedded File')
+                    ->with(['imagePath' => $this->imagePath]);
+            }
+        };
+
+        try {
+            $flightPlan = MailableConverter::convert(
+                mailable: $mailable,
+                to: 'user@example.com'
+            );
+        } finally {
+            unlink($imagePath);
+        }
+
+        $contentId = basename($imagePath);
+
+        $this->assertStringContainsString("cid:{$contentId}", $flightPlan->html);
+        $this->assertArrayHasKey('attachments', $flightPlan->metadata);
+        $this->assertSame(base64_encode('image-bytes'), $flightPlan->metadata['attachments'][0]['content']);
+        $this->assertSame($contentId, $flightPlan->metadata['attachments'][0]['filename']);
+        $this->assertSame('inline', $flightPlan->metadata['attachments'][0]['disposition']);
+        $this->assertSame($contentId, $flightPlan->metadata['attachments'][0]['content_id']);
+    }
+
+    public function testConvertMailableWithEmbeddedData(): void
+    {
+        $this->createView(
+            'embedded-data',
+            '<img src="<?php echo $message->embedData($imageData, \'logo.png\'); ?>" alt="Logo">'
+        );
+
+        $mailable = new class extends Mailable {
+            public function build()
+            {
+                return $this->view('embedded-data')
+                    ->subject('Embedded Data')
+                    ->with(['imageData' => 'image-bytes']);
+            }
+        };
+
+        $flightPlan = MailableConverter::convert(
+            mailable: $mailable,
+            to: 'user@example.com',
+            metadata: [
+                'attachments' => [
+                    [
+                        'content' => base64_encode('report'),
+                        'filename' => 'report.txt',
+                    ],
+                ],
+            ],
+        );
+
+        $this->assertStringContainsString('cid:logo.png', $flightPlan->html);
+        $this->assertCount(2, $flightPlan->metadata['attachments']);
+        $this->assertSame('report.txt', $flightPlan->metadata['attachments'][0]['filename']);
+        $this->assertSame(base64_encode('image-bytes'), $flightPlan->metadata['attachments'][1]['content']);
+        $this->assertSame('logo.png', $flightPlan->metadata['attachments'][1]['filename']);
+        $this->assertSame('inline', $flightPlan->metadata['attachments'][1]['disposition']);
+        $this->assertSame('logo.png', $flightPlan->metadata['attachments'][1]['content_id']);
+    }
+
     public function testHtmlToTextConversion(): void
     {
         $this->createView('html-complex', '

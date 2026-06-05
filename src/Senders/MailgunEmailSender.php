@@ -130,9 +130,28 @@ final class MailgunEmailSender implements MessageSenderInterface
             // Handle attachments
             if (isset($payload->metadata['attachments'])) {
                 $attachments = [];
+                $inlineAttachments = [];
 
                 foreach ($payload->metadata['attachments'] as $attachment) {
                     if (isset($attachment['content'], $attachment['filename'])) {
+                        $disposition = $attachment['disposition'] ?? 'attachment';
+
+                        if (!in_array($disposition, ['attachment', 'inline'], true)) {
+                            return ProviderSendResult::undeliverable(
+                                errorCode: 'ATTACHMENT_INVALID_DISPOSITION',
+                                errorMessage: 'Attachment disposition must be attachment or inline',
+                            );
+                        }
+
+                        $contentId = $attachment['content_id'] ?? null;
+
+                        if ($disposition === 'inline' && (!is_string($contentId) || trim($contentId) === '')) {
+                            return ProviderSendResult::undeliverable(
+                                errorCode: 'ATTACHMENT_MISSING_CONTENT_ID',
+                                errorMessage: 'Inline attachments require a content_id',
+                            );
+                        }
+
                         $decoded = base64_decode($attachment['content'], true);
 
                         if ($decoded === false) {
@@ -154,15 +173,25 @@ final class MailgunEmailSender implements MessageSenderInterface
                             );
                         }
 
-                        $attachments[] = [
+                        $attachmentPayload = [
                             'fileContent' => $decoded,
-                            'filename' => $attachment['filename'],
+                            'filename' => $disposition === 'inline' ? $contentId : $attachment['filename'],
                         ];
+
+                        if ($disposition === 'inline') {
+                            $inlineAttachments[] = $attachmentPayload;
+                        } else {
+                            $attachments[] = $attachmentPayload;
+                        }
                     }
                 }
 
                 if (!empty($attachments)) {
                     $params['attachment'] = $attachments;
+                }
+
+                if (!empty($inlineAttachments)) {
+                    $params['inline'] = $inlineAttachments;
                 }
             }
 

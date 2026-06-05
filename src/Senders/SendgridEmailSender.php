@@ -114,6 +114,24 @@ final class SendgridEmailSender implements MessageSenderInterface
             if (isset($payload->metadata['attachments'])) {
                 foreach ($payload->metadata['attachments'] as $attachment) {
                     if (isset($attachment['content'], $attachment['filename'])) {
+                        $disposition = $attachment['disposition'] ?? 'attachment';
+
+                        if (!in_array($disposition, ['attachment', 'inline'], true)) {
+                            return ProviderSendResult::undeliverable(
+                                errorCode: 'ATTACHMENT_INVALID_DISPOSITION',
+                                errorMessage: 'Attachment disposition must be attachment or inline',
+                            );
+                        }
+
+                        $contentId = $attachment['content_id'] ?? null;
+
+                        if ($disposition === 'inline' && (!is_string($contentId) || trim($contentId) === '')) {
+                            return ProviderSendResult::undeliverable(
+                                errorCode: 'ATTACHMENT_MISSING_CONTENT_ID',
+                                errorMessage: 'Inline attachments require a content_id',
+                            );
+                        }
+
                         $decoded = base64_decode($attachment['content'], true);
 
                         if ($decoded === false) {
@@ -136,6 +154,8 @@ final class SendgridEmailSender implements MessageSenderInterface
                             $attachment['content'],
                             $attachment['type'] ?? 'application/octet-stream',
                             $attachment['filename'],
+                            $disposition,
+                            $contentId,
                         );
                     }
                 }

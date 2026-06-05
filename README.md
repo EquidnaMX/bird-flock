@@ -148,9 +148,34 @@ $messageId = BirdFlock::dispatchMailable(
 - Use familiar Laravel Mailable classes
 - Leverage Blade templates and view rendering
 - Automatic HTML-to-text conversion
-- Support for attachments
+- Support for file and inline attachments
 - Full idempotency and retry logic
 - Dead-letter queue support
+
+Inline attachments can be referenced from HTML with `cid:<content_id>`:
+
+```php
+use Equidna\BirdFlock\BirdFlock;
+use Equidna\BirdFlock\DTO\FlightPlan;
+
+BirdFlock::dispatch(new FlightPlan(
+    channel: 'email',
+    to: 'user@example.com',
+    subject: 'Welcome',
+    html: '<img src="cid:logo.png" alt="Logo"><p>Welcome!</p>',
+    metadata: [
+        'attachments' => [
+            [
+                'content' => base64_encode(file_get_contents(storage_path('mail/logo.png'))),
+                'filename' => 'logo.png',
+                'type' => 'image/png',
+                'disposition' => 'inline',
+                'content_id' => 'logo.png',
+            ],
+        ],
+    ],
+));
+```
 
 ### 7. Monitor Health Status
 
