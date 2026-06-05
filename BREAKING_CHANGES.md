@@ -6,6 +6,20 @@ This document tracks all breaking changes across versions of **Bird Flock** and 
 
 ---
 
+## Version 1.3.0 - "Falcon" (2026-06-05)
+
+### Summary
+
+**Status**: No breaking changes.
+
+This release adds Laravel 13 compatibility and inline email attachment support while preserving existing public APIs and runtime behavior.
+
+#### Migration Steps
+
+No migration is required for existing integrations.
+
+---
+
 ## Version 1.0.0 - "Phoenix" (2025-11-30)
 
 ### Initial Stable Release

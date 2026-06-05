@@ -11,15 +11,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+No unreleased changes.
+
+## [1.3.0] - 2026-06-05 - "Falcon"
+
 ### Added
 
 - Official compatibility with Laravel 13.x.
+- Inline email attachment support (CID/`inline`) across Mailgun and SendGrid senders, including `MailableConverter` support for embedded assets.
 
 ### Changed
 
-- Widened Composer constraints to allow Laravel and Illuminate 13 while preserving Laravel 10, 11, and 12 support.
-- Removed the direct `symfony/uid` dependency because the package does not use it directly.
-- Relaxed `psr/log` from an exact `3.0` pin to `^3.0`.
+- Widened Composer constraints to support Laravel/Illuminate 10, 11, 12, and 13.
+- Removed direct `symfony/uid` dependency because it is not used directly by this package.
+- Relaxed `psr/log` from exact `3.0` to `^3.0`.
+- Refreshed root and package documentation for current architecture, routes, commands, monitoring, and testing guidance.
+
+### Fixed
+
+- Added stricter email attachment validation for invalid dispositions and missing `content_id` in inline payloads.
+- Updated test support fakes and command-related tests for Laravel 13 contract compatibility.
+
+### Security
+
+- No security-related changes in this release.
+
+### Breaking Changes
+
+- None. This release is backward-compatible.
 
 ## [1.2.0] - 2025-12-15 - "Condor"
 
