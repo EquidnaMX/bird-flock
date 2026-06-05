@@ -22,7 +22,7 @@ use Illuminate\Console\OutputStyle;
 
 final class ConfigValidateCommandTest extends TestCase
 {
-    public function testReturnsNonZeroWhenCredentialsMissing(): void
+    public function testReturnsZeroAndWarnsWhenCredentialsMissing(): void
     {
         $cmd = new ConfigValidateCommand();
         $cmd->setLaravel(Container::getInstance());
@@ -34,11 +34,13 @@ final class ConfigValidateCommandTest extends TestCase
         $this->setConfigValue('bird-flock.twilio.account_sid', null);
         $this->setConfigValue('bird-flock.twilio.auth_token', null);
 
-        Container::getInstance()->instance('bird-flock.logger', new InMemoryLogger());
+        $logger = new InMemoryLogger();
+        Container::getInstance()->instance('bird-flock.logger', $logger);
 
         $code = $cmd->handle();
 
-        $this->assertSame(2, $code);
+        $this->assertSame(0, $code);
+        $this->assertTrue($logger->has('bird-flock.twilio.credentials_missing'));
     }
 
     public function testReturnsZeroWhenValidAndEmitsWarnings(): void

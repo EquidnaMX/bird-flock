@@ -11,7 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No unreleased changes at this time.
+### Added
+
+- Official compatibility with Laravel 13.x.
+
+### Changed
+
+- Widened Composer constraints to allow Laravel and Illuminate 13 while preserving Laravel 10, 11, and 12 support.
+- Removed the direct `symfony/uid` dependency because the package does not use it directly.
+- Relaxed `psr/log` from an exact `3.0` pin to `^3.0`.
 
 ## [1.2.0] - 2025-12-15 - "Condor"
 

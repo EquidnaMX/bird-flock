@@ -33,6 +33,16 @@ final class DispatcherFake implements \Illuminate\Contracts\Bus\Dispatcher
         return $this->dispatch($command);
     }
 
+    public function dispatchAfterResponse($command, $handler = null)
+    {
+        $this->dispatch($command);
+    }
+
+    public function chain($jobs = null)
+    {
+        return $this;
+    }
+
     public function hasCommandHandler($command)
     {
         return false;
