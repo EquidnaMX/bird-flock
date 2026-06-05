@@ -252,8 +252,60 @@ class InvoiceEmail extends Mailable
 }
 ```
 
+Bird Flock also supports inline attachments for images and other assets referenced from HTML with `cid:` URLs:
+
+```php
+class BrandedWelcomeEmail extends Mailable
+{
+    public function __construct(
+        private readonly string $logoPath
+    ) {}
+
+    public function build()
+    {
+        return $this->view('emails.branded-welcome')
+            ->subject('Welcome')
+            ->with(['logoPath' => $this->logoPath]);
+    }
+}
+```
+
+**resources/views/emails/branded-welcome.blade.php**:
+
+```blade
+<img src="{{ $message->embed($logoPath) }}" alt="Logo">
+<p>Welcome to our platform.</p>
+```
+
+You can also dispatch inline attachments directly with `FlightPlan` metadata:
+
+```php
+use Equidna\BirdFlock\BirdFlock;
+use Equidna\BirdFlock\DTO\FlightPlan;
+
+$messageId = BirdFlock::dispatch(new FlightPlan(
+    channel: 'email',
+    to: 'customer@example.com',
+    subject: 'Welcome',
+    html: '<img src="cid:logo.png" alt="Logo"><p>Welcome.</p>',
+    metadata: [
+        'attachments' => [
+            [
+                'content' => base64_encode(file_get_contents(storage_path('mail/logo.png'))),
+                'filename' => 'logo.png',
+                'type' => 'image/png',
+                'disposition' => 'inline',
+                'content_id' => 'logo.png',
+            ],
+        ],
+    ],
+));
+```
+
 **Important Notes**:
 - Attachments are base64-encoded and stored in the message payload
+- Inline attachments require `disposition: inline` and `content_id`
+- HTML must reference inline attachments with `cid:<content_id>`
 - Maximum attachment size: 10 MB per file (SendGrid limit)
 - Total payload size limit: 256 KB (configurable)
 - Large attachments may impact queue performance

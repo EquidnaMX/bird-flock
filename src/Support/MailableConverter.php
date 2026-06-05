@@ -52,10 +52,11 @@ final class MailableConverter
         // Render the mailable views
         $html = null;
         $text = null;
+        $inlineMessage = new InlineAttachmentMessage();
 
         // Check if mailable has a view
         if (isset($mailable->view) && $mailable->view) {
-            $html = self::renderView($mailable->view, $viewData);
+            $html = self::renderView($mailable->view, $viewData, $inlineMessage);
         }
 
         // Check if mailable has a text view
@@ -69,11 +70,17 @@ final class MailableConverter
         }
 
         // Handle attachments by encoding them in metadata
-        $attachments = self::extractAttachments($mailable);
+        $attachments = array_merge(
+            self::extractAttachments($mailable),
+            $inlineMessage->attachments()
+        );
 
         // Merge attachments into metadata
         if (!empty($attachments)) {
-            $metadata['attachments'] = $attachments;
+            $metadata['attachments'] = array_merge(
+                $metadata['attachments'] ?? [],
+                $attachments
+            );
         }
 
         return new FlightPlan(
@@ -120,10 +127,15 @@ final class MailableConverter
      *
      * @param  string              $view View name.
      * @param  array<string,mixed> $data View data.
+     * @param  InlineAttachmentMessage|null $message Inline attachment helper.
      * @return string                    Rendered HTML.
      */
-    private static function renderView(string $view, array $data): string
+    private static function renderView(string $view, array $data, ?InlineAttachmentMessage $message = null): string
     {
+        if ($message !== null) {
+            $data['message'] = $message;
+        }
+
         return View::make($view, $data)->render();
     }
 
@@ -208,5 +220,81 @@ final class MailableConverter
         $text = trim($text);
         
         return $text;
+    }
+}
+
+/**
+ * Minimal view helper for Laravel-style inline attachments.
+ */
+final class InlineAttachmentMessage
+{
+    /**
+     * @var array<int,array<string,string>>
+     */
+    private array $attachments = [];
+
+    /**
+     * Embed a file attachment and return its CID reference.
+     *
+     * @param  string $path File path.
+     * @return string       CID reference for the HTML view.
+     */
+    public function embed(string $path): string
+    {
+        if (!is_file($path) || !is_readable($path)) {
+            throw new \InvalidArgumentException("Inline attachment file is not readable: {$path}");
+        }
+
+        $content = file_get_contents($path);
+
+        if ($content === false) {
+            throw new \InvalidArgumentException("Inline attachment file could not be read: {$path}");
+        }
+
+        $filename = basename($path);
+
+        $this->attachments[] = [
+            'content' => base64_encode($content),
+            'filename' => $filename,
+            'type' => mime_content_type($path) ?: 'application/octet-stream',
+            'disposition' => 'inline',
+            'content_id' => $filename,
+        ];
+
+        return "cid:{$filename}";
+    }
+
+    /**
+     * Embed in-memory data and return its CID reference.
+     *
+     * @param  string $data Raw attachment data.
+     * @param  string $name Attachment name and content ID.
+     * @return string       CID reference for the HTML view.
+     */
+    public function embedData(string $data, string $name): string
+    {
+        if (trim($name) === '') {
+            throw new \InvalidArgumentException('Inline attachment name cannot be empty');
+        }
+
+        $this->attachments[] = [
+            'content' => base64_encode($data),
+            'filename' => $name,
+            'type' => 'application/octet-stream',
+            'disposition' => 'inline',
+            'content_id' => $name,
+        ];
+
+        return "cid:{$name}";
+    }
+
+    /**
+     * Return collected inline attachments.
+     *
+     * @return array<int,array<string,string>>
+     */
+    public function attachments(): array
+    {
+        return $this->attachments;
     }
 }

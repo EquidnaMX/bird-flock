@@ -49,9 +49,8 @@ final class BirdFlockMailableTest extends TestCase
 
         // Mock repository
         $repository = $this->createMock(OutboundMessageRepositoryInterface::class);
-        $repository->expects($this->once())
-            ->method('findByIdempotencyKey')
-            ->willReturn(null);
+        $repository->expects($this->never())
+            ->method('findByIdempotencyKey');
         
         $repository->expects($this->once())
             ->method('create')
@@ -129,9 +128,8 @@ final class BirdFlockMailableTest extends TestCase
 
         // Mock repository
         $repository = $this->createMock(OutboundMessageRepositoryInterface::class);
-        $repository->expects($this->once())
-            ->method('findByIdempotencyKey')
-            ->willReturn(null);
+        $repository->expects($this->never())
+            ->method('findByIdempotencyKey');
         
         $repository->expects($this->once())
             ->method('create')
@@ -173,9 +171,8 @@ final class BirdFlockMailableTest extends TestCase
 
         // Mock repository
         $repository = $this->createMock(OutboundMessageRepositoryInterface::class);
-        $repository->expects($this->once())
-            ->method('findByIdempotencyKey')
-            ->willReturn(null);
+        $repository->expects($this->never())
+            ->method('findByIdempotencyKey');
         
         $repository->expects($this->once())
             ->method('create')

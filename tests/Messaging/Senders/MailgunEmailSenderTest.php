@@ -204,6 +204,181 @@ final class MailgunEmailSenderTest extends TestCase
     }
 
     /**
+     * Sends inline attachments through Mailgun's inline parameter.
+     *
+     * @return void
+     */
+    public function testSendWithInlineAttachment(): void
+    {
+        $response = new class {
+            public function getId(): string
+            {
+                return '<inline@example.com>';
+            }
+
+            public function getMessage(): string
+            {
+                return 'Queued. Thank you.';
+            }
+        };
+
+        $messageApi = $this->createMock(MessageApi::class);
+        $messageApi->expects($this->once())
+            ->method('send')
+            ->with(
+                'mg.example.com',
+                $this->callback(function ($params) {
+                    return isset($params['inline'])
+                        && !isset($params['attachment'])
+                        && $params['inline'][0]['filename'] === 'logo.png'
+                        && $params['inline'][0]['fileContent'] === 'image-bytes';
+                })
+            )
+            ->willReturn($response);
+
+        $mailgun = $this->createMock(Mailgun::class);
+        $mailgun->method('messages')->willReturn($messageApi);
+
+        $sender = new MailgunEmailSender(
+            client: $mailgun,
+            domain: 'mg.example.com',
+            fromEmail: 'noreply@example.com',
+            fromName: 'Test Sender',
+        );
+
+        $payload = new FlightPlan(
+            channel: 'email',
+            to: 'test@example.com',
+            subject: 'Test',
+            html: '<img src="cid:logo.png">',
+            metadata: [
+                'attachments' => [
+                    [
+                        'filename' => 'original-logo.png',
+                        'content' => base64_encode('image-bytes'),
+                        'type' => 'image/png',
+                        'disposition' => 'inline',
+                        'content_id' => 'logo.png',
+                    ],
+                ],
+            ],
+        );
+
+        $result = $sender->send($payload);
+
+        $this->assertEquals('sent', $result->status);
+    }
+
+    /**
+     * Sends normal and inline attachments in separate Mailgun parameters.
+     *
+     * @return void
+     */
+    public function testSendWithMixedAttachments(): void
+    {
+        $response = new class {
+            public function getId(): string
+            {
+                return '<mixed@example.com>';
+            }
+
+            public function getMessage(): string
+            {
+                return 'Queued. Thank you.';
+            }
+        };
+
+        $messageApi = $this->createMock(MessageApi::class);
+        $messageApi->expects($this->once())
+            ->method('send')
+            ->with(
+                'mg.example.com',
+                $this->callback(function ($params) {
+                    return isset($params['attachment'], $params['inline'])
+                        && $params['attachment'][0]['filename'] === 'report.txt'
+                        && $params['attachment'][0]['fileContent'] === 'report'
+                        && $params['inline'][0]['filename'] === 'logo.png'
+                        && $params['inline'][0]['fileContent'] === 'image-bytes';
+                })
+            )
+            ->willReturn($response);
+
+        $mailgun = $this->createMock(Mailgun::class);
+        $mailgun->method('messages')->willReturn($messageApi);
+
+        $sender = new MailgunEmailSender(
+            client: $mailgun,
+            domain: 'mg.example.com',
+            fromEmail: 'noreply@example.com',
+            fromName: 'Test Sender',
+        );
+
+        $payload = new FlightPlan(
+            channel: 'email',
+            to: 'test@example.com',
+            subject: 'Test',
+            text: 'Body',
+            metadata: [
+                'attachments' => [
+                    [
+                        'filename' => 'report.txt',
+                        'content' => base64_encode('report'),
+                    ],
+                    [
+                        'filename' => 'original-logo.png',
+                        'content' => base64_encode('image-bytes'),
+                        'disposition' => 'inline',
+                        'content_id' => 'logo.png',
+                    ],
+                ],
+            ],
+        );
+
+        $result = $sender->send($payload);
+
+        $this->assertEquals('sent', $result->status);
+    }
+
+    /**
+     * Returns undeliverable for inline attachments without content ID.
+     *
+     * @return void
+     */
+    public function testSendInlineAttachmentWithoutContentIdReturnsUndeliverable(): void
+    {
+        $mailgun = $this->createMock(Mailgun::class);
+        $mailgun->expects($this->never())->method('messages');
+
+        $sender = new MailgunEmailSender(
+            client: $mailgun,
+            domain: 'mg.example.com',
+            fromEmail: 'noreply@example.com',
+            fromName: 'Test Sender',
+        );
+
+        $payload = new FlightPlan(
+            channel: 'email',
+            to: 'test@example.com',
+            subject: 'Test',
+            text: 'Body',
+            metadata: [
+                'attachments' => [
+                    [
+                        'filename' => 'logo.png',
+                        'content' => base64_encode('image-bytes'),
+                        'disposition' => 'inline',
+                    ],
+                ],
+            ],
+        );
+
+        $result = $sender->send($payload);
+
+        $this->assertEquals('undeliverable', $result->status);
+        $this->assertEquals('ATTACHMENT_MISSING_CONTENT_ID', $result->errorCode);
+    }
+
+    /**
      * Returns failed result when API throws exception.
      *
      * @return void
@@ -263,7 +438,7 @@ final class MailgunEmailSenderTest extends TestCase
 
         $payload = new FlightPlan(
             channel: 'email',
-            to: 'invalid-email',
+            to: 'invalid@example.com',
             subject: 'Test',
             text: 'Body',
         );

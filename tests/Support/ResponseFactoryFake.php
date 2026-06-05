@@ -13,10 +13,12 @@
 namespace Equidna\BirdFlock\Tests\Support;
 
 use BadMethodCallException;
+use Closure;
 use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
+use Illuminate\Http\StreamedEvent;
 use Symfony\Component\HttpFoundation\StreamedJsonResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -57,6 +59,14 @@ final class ResponseFactoryFake implements ResponseFactory
         $response->setCallback($callback);
 
         return $response;
+    }
+
+    public function eventStream(Closure $callback, array $headers = [], StreamedEvent|string|null $endStreamWith = '</stream>')
+    {
+        return $this->stream($callback, 200, array_merge($headers, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+        ]));
     }
 
     public function stream($callback, $status = 200, array $headers = [])
