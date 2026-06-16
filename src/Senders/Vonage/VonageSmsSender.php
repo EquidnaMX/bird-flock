@@ -5,12 +5,12 @@
  *
  * PHP 8.1+
  *
- * @package   Equidna\BirdFlock\Senders
+ * @package   Equidna\BirdFlock\Senders\Vonage
  * @author    Gabriel Ruelas <gruelas@gruelas.com>
  * @license   https://opensource.org/licenses/MIT MIT License
  */
 
-namespace Equidna\BirdFlock\Senders;
+namespace Equidna\BirdFlock\Senders\Vonage;
 
 use Vonage\Client as VonageClient;
 use Vonage\SMS\Message\SMS;
@@ -190,3 +190,4 @@ final class VonageSmsSender implements MessageSenderInterface
         }
     }
 }
+

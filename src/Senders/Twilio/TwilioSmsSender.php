@@ -5,12 +5,12 @@
  *
  * PHP 8.1+
  *
- * @package   Equidna\BirdFlock\Senders
+ * @package   Equidna\BirdFlock\Senders\Twilio
  * @author    Gabriel Ruelas <gruelas@gruelas.com>
  * @license   https://opensource.org/licenses/MIT MIT License
  */
 
-namespace Equidna\BirdFlock\Senders;
+namespace Equidna\BirdFlock\Senders\Twilio;
 
 use Twilio\Rest\Client;
 use Equidna\BirdFlock\Contracts\MessageSenderInterface;
@@ -86,8 +86,8 @@ final class TwilioSmsSender implements MessageSenderInterface
                 // provided, infer it from the configured `from` value. This keeps
                 // configuration minimal while allowing an override via
                 // `TWILIO_SANDBOX_FROM`.
-                if (config('bird-flock.twilio.sandbox_mode', false)) {
-                    $configuredSandbox = config('bird-flock.twilio.sandbox_from');
+                if (config('bird-flock-twilio.sandbox_mode', false)) {
+                    $configuredSandbox = config('bird-flock-twilio.sandbox_from');
                     $effectiveSandboxFrom = $configuredSandbox ?: $this->from;
                     Logger::warning('bird-flock.sender.twilio_sms.sandbox_from_used', [
                         'sandbox_from' => $effectiveSandboxFrom,
@@ -195,3 +195,4 @@ final class TwilioSmsSender implements MessageSenderInterface
         }
     }
 }
+

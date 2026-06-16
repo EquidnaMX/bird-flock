@@ -2,8 +2,8 @@
 
 namespace Equidna\BirdFlock\Tests\Unit\Senders;
 
-use Equidna\BirdFlock\Senders\TwilioSmsSender;
-use Equidna\BirdFlock\Senders\TwilioWhatsappSender;
+use Equidna\BirdFlock\Senders\Twilio\TwilioSmsSender;
+use Equidna\BirdFlock\Senders\Twilio\TwilioWhatsappSender;
 use Equidna\BirdFlock\DTO\FlightPlan;
 use Equidna\BirdFlock\Tests\Support\InMemoryLogger;
 use Equidna\BirdFlock\Tests\TestCase;
@@ -14,9 +14,9 @@ final class TwilioSandboxTest extends TestCase
 {
     public function testSmsSenderLogsSandboxFromUsedWhenSandboxEnabledInferred(): void
     {
-        $this->setConfigValue('bird-flock.twilio.sandbox_mode', true);
-        $this->setConfigValue('bird-flock.twilio.sandbox_from', null);
-        $this->setConfigValue('bird-flock.twilio.from_sms', '+15551234567');
+        $this->setConfigValue('bird-flock-twilio.sandbox_mode', true);
+        $this->setConfigValue('bird-flock-twilio.sandbox_from', null);
+        $this->setConfigValue('bird-flock-twilio.from_sms', '+15551234567');
 
         $logger = new InMemoryLogger();
         Container::getInstance()->instance('bird-flock.logger', $logger);
@@ -45,9 +45,9 @@ final class TwilioSandboxTest extends TestCase
 
     public function testWhatsappSenderLogsSandboxFromUsedWhenSandboxEnabledInferred(): void
     {
-        $this->setConfigValue('bird-flock.twilio.sandbox_mode', true);
-        $this->setConfigValue('bird-flock.twilio.sandbox_from', null);
-        $this->setConfigValue('bird-flock.twilio.from_whatsapp', 'whatsapp:+15551234567');
+        $this->setConfigValue('bird-flock-twilio.sandbox_mode', true);
+        $this->setConfigValue('bird-flock-twilio.sandbox_from', null);
+        $this->setConfigValue('bird-flock-twilio.from_whatsapp', 'whatsapp:+15551234567');
 
         $logger = new InMemoryLogger();
         Container::getInstance()->instance('bird-flock.logger', $logger);

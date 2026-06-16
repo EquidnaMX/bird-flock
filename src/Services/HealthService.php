@@ -43,11 +43,20 @@ final class HealthService
     {
         $checks = [
             'database' => $this->checkDatabase(),
-            'twilio' => $this->checkTwilio(),
-            'sendgrid' => $this->checkSendgrid(),
             'queue' => $this->checkQueue(),
             'circuits' => $this->checkCircuits(),
         ];
+
+        foreach ($this->getConfiguredVendors() as $vendor) {
+            $checks[$vendor] = match ($vendor) {
+                'twilio' => $this->checkTwilio(),
+                'vonage' => $this->checkVonage(),
+                'sendgrid' => $this->checkSendgrid(),
+                'mailgun' => $this->checkMailgun(),
+                'labsmobile' => $this->checkLabsmobile(),
+                default => $this->checkCustomSender($vendor),
+            };
+        }
 
         $healthy = ! in_array(false, array_column($checks, 'healthy'), true);
 
@@ -85,6 +94,7 @@ final class HealthService
             'sendgrid_email',
             'vonage_sms',
             'mailgun_email',
+            'labsmobile_sms',
         ];
 
         $circuits = [];
@@ -179,7 +189,13 @@ final class HealthService
      */
     private function getPackageVersion(): string
     {
-        $lockPath = base_path('composer.lock');
+        try {
+            $lockPath = function_exists('base_path')
+                ? base_path('composer.lock')
+                : dirname(__DIR__, 2) . '/composer.lock';
+        } catch (Throwable) {
+            $lockPath = dirname(__DIR__, 2) . '/composer.lock';
+        }
 
         if (! file_exists($lockPath)) {
             return 'unknown';
@@ -234,8 +250,8 @@ final class HealthService
      */
     private function checkTwilio(): array
     {
-        $accountSid = config('bird-flock.twilio.account_sid');
-        $authToken = config('bird-flock.twilio.auth_token');
+        $accountSid = config('bird-flock-twilio.account_sid');
+        $authToken = config('bird-flock-twilio.auth_token');
 
         if (! $accountSid || ! $authToken) {
             return [
@@ -244,8 +260,8 @@ final class HealthService
             ];
         }
 
-        $messagingService = config('bird-flock.twilio.messaging_service_sid');
-        $fromSms = config('bird-flock.twilio.from_sms');
+        $messagingService = config('bird-flock-twilio.messaging_service_sid');
+        $fromSms = config('bird-flock-twilio.from_sms');
 
         if (! $messagingService && ! $fromSms) {
             return [
@@ -261,14 +277,45 @@ final class HealthService
     }
 
     /**
+     * Check Vonage configuration.
+     *
+     * @return array{healthy: bool, message: string}
+     */
+    private function checkVonage(): array
+    {
+        $apiKey = config('bird-flock-vonage.api_key');
+        $apiSecret = config('bird-flock-vonage.api_secret');
+        $fromSms = config('bird-flock-vonage.from_sms');
+
+        if (! $apiKey || ! $apiSecret) {
+            return [
+                'healthy' => false,
+                'message' => 'Vonage credentials not configured',
+            ];
+        }
+
+        if (! $fromSms) {
+            return [
+                'healthy' => false,
+                'message' => 'Vonage from_sms not configured',
+            ];
+        }
+
+        return [
+            'healthy' => true,
+            'message' => 'Vonage configured',
+        ];
+    }
+
+    /**
      * Check SendGrid configuration.
      *
      * @return array{healthy: bool, message: string}
      */
     private function checkSendgrid(): array
     {
-        $apiKey = config('bird-flock.sendgrid.api_key');
-        $fromEmail = config('bird-flock.sendgrid.from_email');
+        $apiKey = config('bird-flock-sendgrid.api_key');
+        $fromEmail = config('bird-flock-sendgrid.from_email');
 
         if (! $apiKey) {
             return [
@@ -287,6 +334,85 @@ final class HealthService
         return [
             'healthy' => true,
             'message' => 'SendGrid configured',
+        ];
+    }
+
+    /**
+     * Check Mailgun configuration.
+     *
+     * @return array{healthy: bool, message: string}
+     */
+    private function checkMailgun(): array
+    {
+        $apiKey = config('bird-flock-mailgun.api_key');
+        $domain = config('bird-flock-mailgun.domain');
+        $fromEmail = config('bird-flock-mailgun.from_email');
+
+        if (! $apiKey) {
+            return [
+                'healthy' => false,
+                'message' => 'Mailgun API key not configured',
+            ];
+        }
+
+        if (! $domain) {
+            return [
+                'healthy' => false,
+                'message' => 'Mailgun domain not configured',
+            ];
+        }
+
+        if (! $fromEmail) {
+            return [
+                'healthy' => false,
+                'message' => 'Mailgun from_email not configured',
+            ];
+        }
+
+        return [
+            'healthy' => true,
+            'message' => 'Mailgun configured',
+        ];
+    }
+
+    /**
+     * Check LabsMobile configuration.
+     *
+     * @return array{healthy: bool, message: string}
+     */
+    private function checkLabsmobile(): array
+    {
+        $username = config('bird-flock-labsmobile.username');
+        $token = config('bird-flock-labsmobile.token');
+
+        if (! $username || ! $token) {
+            return [
+                'healthy' => false,
+                'message' => 'LabsMobile credentials not configured',
+            ];
+        }
+
+        return [
+            'healthy' => true,
+            'message' => 'LabsMobile configured',
+        ];
+    }
+
+    /**
+     * @return array{healthy: bool, message: string}
+     */
+    private function checkCustomSender(string $vendor): array
+    {
+        if (! $this->isCustomSenderConfigured($vendor)) {
+            return [
+                'healthy' => false,
+                'message' => "Unsupported vendor configured: {$vendor}",
+            ];
+        }
+
+        return [
+            'healthy' => true,
+            'message' => "Custom sender configured for vendor: {$vendor}",
         ];
     }
 
@@ -323,6 +449,9 @@ final class HealthService
             'twilio_sms' => new CircuitBreaker('twilio_sms'),
             'twilio_whatsapp' => new CircuitBreaker('twilio_whatsapp'),
             'sendgrid_email' => new CircuitBreaker('sendgrid_email'),
+            'vonage_sms' => new CircuitBreaker('vonage_sms'),
+            'mailgun_email' => new CircuitBreaker('mailgun_email'),
+            'labsmobile_sms' => new CircuitBreaker('labsmobile_sms'),
         ];
 
         $states = [];
@@ -340,6 +469,52 @@ final class HealthService
             'message' => $allHealthy ? 'All circuits closed' : 'One or more circuits not closed',
             'states' => $states,
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getConfiguredVendors(): array
+    {
+        $channels = config('bird-flock.channels', []);
+        $vendors = [];
+
+        foreach ($channels as $channel) {
+            $configured = [];
+
+            if (isset($channel['senders']) && is_array($channel['senders'])) {
+                $configured = array_keys($channel['senders']);
+            } elseif (isset($channel['vendors']) && is_array($channel['vendors'])) {
+                $configured = $channel['vendors'];
+            }
+
+            foreach ($configured as $vendor) {
+                if (is_string($vendor) && trim($vendor) !== '') {
+                    $vendors[] = strtolower(trim($vendor));
+                }
+            }
+        }
+
+        return array_values(array_unique($vendors));
+    }
+
+    private function isCustomSenderConfigured(string $vendor): bool
+    {
+        $channels = config('bird-flock.channels', []);
+
+        foreach ($channels as $channel) {
+            if (! isset($channel['senders']) || ! is_array($channel['senders'])) {
+                continue;
+            }
+
+            foreach (array_keys($channel['senders']) as $configuredVendor) {
+                if (is_string($configuredVendor) && strtolower(trim($configuredVendor)) === $vendor) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -132,8 +132,8 @@ class SendgridWebhookControllerTest extends TestCase
     }
     public function testEventsWebhookThrowsWhenSignedWebhooksEnabledWithoutKey(): void
     {
-        $this->setConfigValue('bird-flock.sendgrid.require_signed_webhooks', true);
-        $this->setConfigValue('bird-flock.sendgrid.webhook_public_key', null);
+        $this->setConfigValue('bird-flock-sendgrid.require_signed_webhooks', true);
+        $this->setConfigValue('bird-flock-sendgrid.webhook_public_key', null);
 
         $repository = $this->createMock(OutboundMessageRepositoryInterface::class);
         $controller = new SendgridWebhookController($repository);
@@ -145,8 +145,8 @@ class SendgridWebhookControllerTest extends TestCase
 
     public function testEventsWebhookAllowsSignedWebhooksWithKeyConfigured(): void
     {
-        $this->setConfigValue('bird-flock.sendgrid.require_signed_webhooks', true);
-        $this->setConfigValue('bird-flock.sendgrid.webhook_public_key', 'test-key');
+        $this->setConfigValue('bird-flock-sendgrid.require_signed_webhooks', true);
+        $this->setConfigValue('bird-flock-sendgrid.webhook_public_key', 'test-key');
 
         $repository = $this->createMock(OutboundMessageRepositoryInterface::class);
         $repository->expects($this->never())->method('updateStatus');

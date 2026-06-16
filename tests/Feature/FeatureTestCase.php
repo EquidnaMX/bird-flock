@@ -53,6 +53,7 @@ abstract class FeatureTestCase extends TestCase
     {
         parent::setUp();
 
+        app()->instance('db', self::$capsule->getDatabaseManager());
         $this->createTables();
         $this->bindRepository();
     }

@@ -13,7 +13,7 @@
 namespace Equidna\BirdFlock\Tests\Unit\Senders;
 
 use Equidna\BirdFlock\DTO\FlightPlan;
-use Equidna\BirdFlock\Senders\SendgridEmailSender;
+use Equidna\BirdFlock\Senders\Sendgrid\SendgridEmailSender;
 use Equidna\BirdFlock\Tests\TestCase;
 use SendGrid;
 use SendGrid\Response;

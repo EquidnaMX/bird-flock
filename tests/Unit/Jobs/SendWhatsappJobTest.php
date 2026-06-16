@@ -17,7 +17,7 @@ use Equidna\BirdFlock\DTO\FlightPlan;
 use Equidna\BirdFlock\DTO\ProviderSendResult;
 use Equidna\BirdFlock\Jobs\SendWhatsappJob;
 use Equidna\BirdFlock\MessageFactory;
-use Equidna\BirdFlock\Senders\TwilioWhatsappSender;
+use Equidna\BirdFlock\Senders\Twilio\TwilioWhatsappSender;
 use Equidna\BirdFlock\Support\DeadLetterService;
 use Equidna\BirdFlock\Tests\TestCase;
 

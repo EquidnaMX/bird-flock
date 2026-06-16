@@ -13,7 +13,7 @@
 namespace Equidna\BirdFlock\Tests\Messaging\Senders;
 
 use Equidna\BirdFlock\DTO\FlightPlan;
-use Equidna\BirdFlock\Senders\VonageSmsSender;
+use Equidna\BirdFlock\Senders\Vonage\VonageSmsSender;
 use Exception;
 use PHPUnit\Framework\TestCase;
 use Vonage\Client as VonageClient;

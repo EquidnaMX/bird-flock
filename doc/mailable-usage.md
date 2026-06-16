@@ -321,9 +321,11 @@ Bird Flock automatically retries failed email sends with exponential backoff:
 ```php
 // Default retry configuration (can be customized in config)
 'email' => [
-    'max_attempts' => 3,
-    'base_delay_ms' => 1000,
-    'max_delay_ms' => 60000,
+    'retry' => [
+        'max_attempts' => 3,
+        'base_delay_ms' => 1000,
+        'max_delay_ms' => 60000,
+    ],
 ]
 ```
 
@@ -499,9 +501,9 @@ MAILGUN_FROM_EMAIL=noreply@example.com
 Customize retry behavior in `config/bird-flock.php`:
 
 ```php
-'retry' => [
-    'channels' => [
-        'email' => [
+'channels' => [
+    'email' => [
+        'retry' => [
             'max_attempts' => 3,        // Number of retry attempts
             'base_delay_ms' => 1000,    // Initial delay (1 second)
             'max_delay_ms' => 60000,    // Maximum delay (1 minute)

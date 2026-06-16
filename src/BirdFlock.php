@@ -272,11 +272,26 @@ final class BirdFlock
         $repository ??= app(OutboundMessageRepositoryInterface::class);
         $messageIds = [];
         $dataToInsert = [];
+        $payloadsToDispatch = [];
         $maxSize = config('bird-flock.max_payload_size', 262144);
+        $tableName = config('bird-flock.tables.outbound_messages');
 
         Logger::info('bird-flock.batch.received', [
             'count' => count($payloads),
         ]);
+
+        $idempotencyKeys = array_values(array_filter(array_map(
+            static fn (FlightPlan $payload): ?string => $payload->idempotencyKey,
+            array_filter($payloads, static fn ($payload): bool => $payload instanceof FlightPlan)
+        )));
+
+        $existingByIdempotencyKey = [];
+        if ($idempotencyKeys !== []) {
+            $existingByIdempotencyKey = DB::table($tableName)
+                ->whereIn('idempotencyKey', $idempotencyKeys)
+                ->pluck('id_outboundMessage', 'idempotencyKey')
+                ->toArray();
+        }
 
         // Prepare all messages
         foreach ($payloads as $payload) {
@@ -289,8 +304,17 @@ final class BirdFlock
                 throw new \RuntimeException("Payload exceeds maximum size of {$maxSize} bytes");
             }
 
+            if (
+                $payload->idempotencyKey
+                && isset($existingByIdempotencyKey[$payload->idempotencyKey])
+            ) {
+                $messageIds[] = $existingByIdempotencyKey[$payload->idempotencyKey];
+                continue;
+            }
+
             $messageId = (string) Str::ulid();
             $messageIds[] = $messageId;
+            $payloadsToDispatch[$messageId] = $payload;
 
             $dataToInsert[] = [
                 'id_outboundMessage' => $messageId,
@@ -298,7 +322,7 @@ final class BirdFlock
                 'to' => $payload->to,
                 'subject' => $payload->subject,
                 'templateKey' => $payload->templateKey,
-                'payload' => $payload->toArray(),
+                'payload' => $payloadJson,
                 'status' => 'queued',
                 'idempotencyKey' => $payload->idempotencyKey,
                 'queuedAt' => now(),
@@ -309,19 +333,16 @@ final class BirdFlock
 
         // Atomic batch insert with chunking to avoid DB packet size limits
         try {
-            DB::transaction(function () use ($dataToInsert, $payloads, $messageIds) {
-                $tableName = config('bird-flock.tables.outbound_messages');
+            DB::transaction(function () use ($dataToInsert, $payloadsToDispatch, $tableName) {
                 $chunkSize = config('bird-flock.batch_insert_chunk_size', 500);
 
                 foreach (array_chunk($dataToInsert, $chunkSize) as $chunk) {
                     DB::table($tableName)->insert($chunk);
                 }
 
-                // Dispatch all jobs
+                // Dispatch only newly-created jobs; existing idempotent messages are reused.
                 $queue = config('bird-flock.default_queue', 'default');
-                foreach ($payloads as $index => $payload) {
-                    $messageId = $messageIds[$index];
-
+                foreach ($payloadsToDispatch as $messageId => $payload) {
                     Event::dispatch(new MessageQueued($messageId, $payload));
 
                     $job = DispatchMessageJob::dispatch($messageId, $payload)

@@ -14,7 +14,7 @@ class TwilioWebhookControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->setConfigValue('bird-flock.twilio.auth_token', 'test_token');
+        $this->setConfigValue('bird-flock-twilio.auth_token', 'test_token');
     }
 
     public function testStatusWebhookUpdatesMessageStatus(): void
@@ -117,7 +117,7 @@ class TwilioWebhookControllerTest extends TestCase
 
     public function testStatusWebhookFailsWhenAuthTokenMissing(): void
     {
-        $this->setConfigValue('bird-flock.twilio.auth_token', null);
+        $this->setConfigValue('bird-flock-twilio.auth_token', null);
 
         $repository = $this->createMock(OutboundMessageRepositoryInterface::class);
         $url = 'https://example.com/webhooks/twilio/status';

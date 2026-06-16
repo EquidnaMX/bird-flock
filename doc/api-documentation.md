@@ -32,7 +32,7 @@ Responses:
 ## Webhook Endpoints
 
 Shared behavior:
-- `POST` routes
+- Provider-specific HTTP method (`GET` for LabsMobile ACK, `POST` for the other webhooks)
 - middleware `throttle:60,1`
 - success body is plain `OK`
 - signature/authorization checks handled in controllers
@@ -81,12 +81,21 @@ Shared behavior:
 - Security: Mailgun signature + timestamp checks when required
 - Responses: `200`, `400`, `401`, `500`
 
+### GET /bird-flock/webhooks/labsmobile/ack
+
+- Name: `bird-flock.labsmobile.ack`
+- Controller: `LabsmobileWebhookController::ack`
+- Required query fields: `subid`, `msisdn`, `status`, `acklevel`
+- Security: optional `LABSMOBILE_WEBHOOK_TOKEN` matched against `token` query parameter
+- Responses: `200`, `400`, `401`
+
 ## Status Mapping Summary
 
 - Twilio: maps provider statuses to internal `queued|sending|sent|delivered|failed|undeliverable`.
 - SendGrid: event mapping includes `processed->sending`, `delivered->delivered`, bounce-like events to failures.
 - Vonage: maps delivery receipt statuses to internal state.
 - Mailgun: maps event types such as `accepted`, `delivered`, `failed`, `rejected`, `complained`, `unsubscribed`.
+- LabsMobile: maps `handset/status=ok` to `delivered`, gateway/operator ACKs to `sent`, and errors to `failed`.
 
 ## Assumptions
 

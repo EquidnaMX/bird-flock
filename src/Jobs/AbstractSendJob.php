@@ -58,7 +58,7 @@ abstract class AbstractSendJob implements ShouldQueue
         $this->messageId = $messageId;
         $this->payload = $payload;
 
-        $config = config("bird-flock.retry.channels.{$this->getChannel()}", []);
+        $config = config("bird-flock.channels.{$this->getChannel()}.retry", []);
         $this->tries = (int) ($config['max_attempts'] ?? $this->tries);
         $this->baseDelayMs = (int) ($config['base_delay_ms'] ?? 1000);
         $this->maxDelayMs = (int) ($config['max_delay_ms'] ?? 60000);

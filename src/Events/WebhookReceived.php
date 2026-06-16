@@ -17,7 +17,7 @@ final class WebhookReceived
     /**
      * Create a new webhook received event.
      *
-     * @param string               $provider Provider name (twilio|sendgrid).
+     * @param string               $provider Provider name.
      * @param string               $type     Event type.
      * @param array<string, mixed> $payload  Webhook payload data.
      */

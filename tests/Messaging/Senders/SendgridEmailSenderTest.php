@@ -3,7 +3,7 @@
 namespace Equidna\BirdFlock\Tests\Messaging\Senders;
 
 use PHPUnit\Framework\TestCase;
-use Equidna\BirdFlock\Senders\SendgridEmailSender;
+use Equidna\BirdFlock\Senders\Sendgrid\SendgridEmailSender;
 use Equidna\BirdFlock\DTO\FlightPlan;
 use SendGrid;
 use SendGrid\Response;

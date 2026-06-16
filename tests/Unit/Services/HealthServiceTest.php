@@ -13,9 +13,9 @@
 namespace Equidna\BirdFlock\Tests\Unit\Services;
 
 use Equidna\BirdFlock\Services\HealthService;
+use Equidna\BirdFlock\Tests\Support\NoArgSender;
 use Equidna\BirdFlock\Tests\TestCase;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Container\Container;
 
 final class HealthServiceTest extends TestCase
 {
@@ -29,31 +29,21 @@ final class HealthServiceTest extends TestCase
 
     public function testGetHealthStatusReturnsHealthyWhenAllServicesUp(): void
     {
-        // Mock database connection
-        DB::shouldReceive('connection->getPdo')->andReturn(true);
-        DB::shouldReceive('getSchemaBuilder->hasTable')->andReturn(true);
-        DB::shouldReceive('table->count')->andReturn(0);
-        DB::shouldReceive('table->select->groupBy->pluck->toArray')->andReturn([]);
+        $this->bindHealthyDatabase();
 
         config([
-            'bird-flock.twilio.account_sid' => 'test_sid',
-            'bird-flock.twilio.auth_token' => 'test_token',
-            'bird-flock.twilio.from_sms' => '+1234567890',
-            'bird-flock.sendgrid.api_key' => 'test_key',
-            'bird-flock.sendgrid.from_email' => 'test@example.com',
+            'bird-flock-twilio.account_sid' => 'test_sid',
+            'bird-flock-twilio.auth_token' => 'test_token',
+            'bird-flock-twilio.from_sms' => '+1234567890',
+            'bird-flock-sendgrid.api_key' => 'test_key',
+            'bird-flock-sendgrid.from_email' => 'test@example.com',
             'bird-flock.default_queue' => 'default',
+            'bird-flock.channels.email.senders' => [
+                'sendgrid' => [
+                    'sender' => \Equidna\BirdFlock\Senders\Sendgrid\SendgridEmailSender::class,
+                ],
+            ],
         ]);
-
-        // Mock circuit breakers
-        Cache::shouldReceive('get')
-            ->with('circuit_breaker:twilio_sms:state', 'closed')
-            ->andReturn('closed');
-        Cache::shouldReceive('get')
-            ->with('circuit_breaker:twilio_whatsapp:state', 'closed')
-            ->andReturn('closed');
-        Cache::shouldReceive('get')
-            ->with('circuit_breaker:sendgrid_email:state', 'closed')
-            ->andReturn('closed');
 
         $health = $this->healthService->getHealthStatus();
 
@@ -68,19 +58,21 @@ final class HealthServiceTest extends TestCase
 
     public function testGetHealthStatusReturnsDegradedWhenDatabaseFails(): void
     {
-        // Mock database failure
-        DB::shouldReceive('connection->getPdo')->andThrow(new \Exception('Connection failed'));
+        $this->bindFailingDatabase();
 
         config([
-            'bird-flock.twilio.account_sid' => 'test_sid',
-            'bird-flock.twilio.auth_token' => 'test_token',
-            'bird-flock.twilio.from_sms' => '+1234567890',
-            'bird-flock.sendgrid.api_key' => 'test_key',
-            'bird-flock.sendgrid.from_email' => 'test@example.com',
+            'bird-flock-twilio.account_sid' => 'test_sid',
+            'bird-flock-twilio.auth_token' => 'test_token',
+            'bird-flock-twilio.from_sms' => '+1234567890',
+            'bird-flock-sendgrid.api_key' => 'test_key',
+            'bird-flock-sendgrid.from_email' => 'test@example.com',
             'bird-flock.default_queue' => 'default',
+            'bird-flock.channels.email.senders' => [
+                'sendgrid' => [
+                    'sender' => \Equidna\BirdFlock\Senders\Sendgrid\SendgridEmailSender::class,
+                ],
+            ],
         ]);
-
-        Cache::shouldReceive('get')->andReturn('closed');
 
         $health = $this->healthService->getHealthStatus();
 
@@ -91,17 +83,6 @@ final class HealthServiceTest extends TestCase
 
     public function testGetCircuitBreakerStatusReturnsAllCircuits(): void
     {
-        // Mock all cache gets for circuit breaker data
-        Cache::shouldReceive('get')->andReturnUsing(function ($key, $default = null) {
-            if (str_contains($key, ':state')) {
-                return 'closed';
-            }
-            if (str_contains($key, ':failures') || str_contains($key, ':successes') || str_contains($key, ':trials')) {
-                return 0;
-            }
-            return $default;
-        });
-
         $circuits = $this->healthService->getCircuitBreakerStatus();
 
         $this->assertSame('healthy', $circuits['status']);
@@ -122,25 +103,9 @@ final class HealthServiceTest extends TestCase
 
     public function testGetCircuitBreakerStatusDetectsOpenCircuit(): void
     {
-        // Mock circuit breaker with one open circuit
-        Cache::shouldReceive('get')->andReturnUsing(function ($key, $default = null) {
-            if ($key === 'circuit_breaker:twilio_sms:state') {
-                return 'open';
-            }
-            if (str_contains($key, ':state')) {
-                return 'closed';
-            }
-            if (str_contains($key, ':failures')) {
-                return 5;
-            }
-            if ($key === 'circuit_breaker:twilio_sms:last_failure') {
-                return time() - 30; // 30 seconds ago
-            }
-            if (str_contains($key, ':successes') || str_contains($key, ':trials')) {
-                return 0;
-            }
-            return $default;
-        });
+        app('cache')->put('circuit_breaker:twilio_sms:state', 'open', 300);
+        app('cache')->put('circuit_breaker:twilio_sms:failures', 5, 300);
+        app('cache')->put('circuit_breaker:twilio_sms:last_failure', time() - 30, 300);
 
         $circuits = $this->healthService->getCircuitBreakerStatus();
 
@@ -149,5 +114,98 @@ final class HealthServiceTest extends TestCase
         $this->assertFalse($circuits['circuits']['twilio_sms']['healthy']);
         $this->assertArrayHasKey('last_failure_at', $circuits['circuits']['twilio_sms']);
         $this->assertArrayHasKey('recovery_in_seconds', $circuits['circuits']['twilio_sms']);
+    }
+
+    public function testGetHealthStatusDoesNotDegradeForConfiguredCustomSender(): void
+    {
+        $this->bindHealthyDatabase();
+
+        config([
+            'bird-flock.default_queue' => 'default',
+            'bird-flock.channels' => [
+                'sms' => [
+                    'strategy' => 'round_robin',
+                    'senders' => [
+                        'acme' => NoArgSender::class,
+                    ],
+                ],
+            ],
+        ]);
+
+        $health = $this->healthService->getHealthStatus();
+
+        $this->assertSame('healthy', $health['status']);
+        $this->assertTrue($health['checks']['acme']['healthy']);
+        $this->assertSame('Custom sender configured for vendor: acme', $health['checks']['acme']['message']);
+    }
+
+    private function bindHealthyDatabase(): void
+    {
+        Container::getInstance()->instance('db', new class {
+            public function connection(): object
+            {
+                return new class {
+                    public function getPdo(): bool
+                    {
+                        return true;
+                    }
+                };
+            }
+
+            public function getSchemaBuilder(): object
+            {
+                return new class {
+                    public function hasTable(string $table): bool
+                    {
+                        return true;
+                    }
+                };
+            }
+
+            public function table(string $table): object
+            {
+                return new class {
+                    public function count(): int
+                    {
+                        return 0;
+                    }
+
+                    public function select(mixed ...$columns): self
+                    {
+                        return $this;
+                    }
+
+                    public function groupBy(string $column): self
+                    {
+                        return $this;
+                    }
+
+                    public function pluck(string $column, string $key): object
+                    {
+                        return new class {
+                            public function toArray(): array
+                            {
+                                return [];
+                            }
+                        };
+                    }
+                };
+            }
+        });
+    }
+
+    private function bindFailingDatabase(): void
+    {
+        Container::getInstance()->instance('db', new class {
+            public function connection(): object
+            {
+                return new class {
+                    public function getPdo(): void
+                    {
+                        throw new \Exception('Connection failed');
+                    }
+                };
+            }
+        });
     }
 }

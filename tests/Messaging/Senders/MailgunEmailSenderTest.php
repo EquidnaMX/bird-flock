@@ -13,7 +13,7 @@
 namespace Equidna\BirdFlock\Tests\Messaging\Senders;
 
 use Equidna\BirdFlock\DTO\FlightPlan;
-use Equidna\BirdFlock\Senders\MailgunEmailSender;
+use Equidna\BirdFlock\Senders\Mailgun\MailgunEmailSender;
 use Exception;
 use PHPUnit\Framework\TestCase;
 use Mailgun\Mailgun;

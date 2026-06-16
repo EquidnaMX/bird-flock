@@ -14,6 +14,8 @@ namespace Equidna\BirdFlock;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\ClientInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use SendGrid;
@@ -24,7 +26,9 @@ use Equidna\BirdFlock\Console\Commands\SendTestSmsCommand;
 use Equidna\BirdFlock\Console\Commands\SendTestWhatsappCommand;
 use Equidna\BirdFlock\Contracts\OutboundMessageRepositoryInterface;
 use Equidna\BirdFlock\Repositories\EloquentOutboundMessageRepository;
+use Equidna\BirdFlock\Senders\Labsmobile\LabsmobileSmsSender;
 use Equidna\BirdFlock\Support\ConfigValidator;
+use Equidna\BirdFlock\Support\SenderResolver;
 use RuntimeException;
 
 class BirdFlockServiceProvider extends ServiceProvider
@@ -32,6 +36,11 @@ class BirdFlockServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/bird-flock.php', 'bird-flock');
+        $this->mergeConfigFrom(__DIR__ . '/../config/bird-flock-twilio.php', 'bird-flock-twilio');
+        $this->mergeConfigFrom(__DIR__ . '/../config/bird-flock-vonage.php', 'bird-flock-vonage');
+        $this->mergeConfigFrom(__DIR__ . '/../config/bird-flock-sendgrid.php', 'bird-flock-sendgrid');
+        $this->mergeConfigFrom(__DIR__ . '/../config/bird-flock-mailgun.php', 'bird-flock-mailgun');
+        $this->mergeConfigFrom(__DIR__ . '/../config/bird-flock-labsmobile.php', 'bird-flock-labsmobile');
         $this->registerLogger();
 
         $this->app->bind(
@@ -42,8 +51,8 @@ class BirdFlockServiceProvider extends ServiceProvider
         $this->app->singleton(
             TwilioClient::class,
             function (): TwilioClient {
-                $accountSid = config('bird-flock.twilio.account_sid');
-                $authToken  = config('bird-flock.twilio.auth_token');
+                $accountSid = config('bird-flock-twilio.account_sid');
+                $authToken  = config('bird-flock-twilio.auth_token');
 
                 if (!$accountSid || !$authToken) {
                     throw new RuntimeException(
@@ -53,8 +62,8 @@ class BirdFlockServiceProvider extends ServiceProvider
                 }
 
                 // Configure HTTP timeouts via CurlClient options
-                $timeout = config('bird-flock.twilio.timeout', 30);
-                $connectTimeout = config('bird-flock.twilio.connect_timeout', 10);
+                $timeout = config('bird-flock-twilio.timeout', 30);
+                $connectTimeout = config('bird-flock-twilio.connect_timeout', 10);
 
                 $httpClient = new \Twilio\Http\CurlClient([
                     CURLOPT_TIMEOUT => $timeout,
@@ -70,7 +79,7 @@ class BirdFlockServiceProvider extends ServiceProvider
         $this->app->singleton(
             SendGrid::class,
             function (): SendGrid {
-                $apiKey = config('bird-flock.sendgrid.api_key');
+                $apiKey = config('bird-flock-sendgrid.api_key');
 
                 if (!$apiKey) {
                     throw new RuntimeException(
@@ -82,8 +91,8 @@ class BirdFlockServiceProvider extends ServiceProvider
                 $client = new SendGrid($apiKey);
 
                 // Configure HTTP timeouts
-                $timeout = config('bird-flock.sendgrid.timeout', 30);
-                $connectTimeout = config('bird-flock.sendgrid.connect_timeout', 10);
+                $timeout = config('bird-flock-sendgrid.timeout', 30);
+                $connectTimeout = config('bird-flock-sendgrid.connect_timeout', 10);
 
                 $client->client->setCurlOptions([
                     CURLOPT_TIMEOUT => $timeout,
@@ -97,8 +106,8 @@ class BirdFlockServiceProvider extends ServiceProvider
         $this->app->singleton(
             \Vonage\Client::class,
             function (): \Vonage\Client {
-                $apiKey = config('bird-flock.vonage.api_key');
-                $apiSecret = config('bird-flock.vonage.api_secret');
+                $apiKey = config('bird-flock-vonage.api_key');
+                $apiSecret = config('bird-flock-vonage.api_secret');
 
                 if (!$apiKey || !$apiSecret) {
                     throw new RuntimeException(
@@ -117,7 +126,7 @@ class BirdFlockServiceProvider extends ServiceProvider
         $this->app->singleton(
             \Mailgun\Mailgun::class,
             function (): \Mailgun\Mailgun {
-                $apiKey = config('bird-flock.mailgun.api_key');
+                $apiKey = config('bird-flock-mailgun.api_key');
 
                 if (!$apiKey) {
                     throw new RuntimeException(
@@ -126,12 +135,45 @@ class BirdFlockServiceProvider extends ServiceProvider
                     );
                 }
 
-                $endpoint = config('bird-flock.mailgun.endpoint', 'https://api.mailgun.net');
+                $endpoint = config('bird-flock-mailgun.endpoint', 'https://api.mailgun.net');
                 $client = \Mailgun\Mailgun::create($apiKey, $endpoint);
 
                 return $client;
             }
         );
+
+        $this->app->singleton(
+            'bird-flock.labsmobile.http',
+            function (): GuzzleClient {
+                $username = config('bird-flock-labsmobile.username');
+                $token = config('bird-flock-labsmobile.token');
+
+                if (!$username || !$token) {
+                    throw new RuntimeException(
+                        'Bird Flock LabsMobile credentials are not configured. ' .
+                            'Set LABSMOBILE_USERNAME and LABSMOBILE_TOKEN environment variables.'
+                    );
+                }
+
+                return new GuzzleClient([
+                    'timeout' => config('bird-flock-labsmobile.timeout', 30),
+                    'connect_timeout' => config('bird-flock-labsmobile.connect_timeout', 10),
+                    'auth' => [$username, $token],
+                    'headers' => [
+                        'Cache-Control' => 'no-cache',
+                        'Content-Type' => 'application/json',
+                    ],
+                    'http_errors' => false,
+                ]);
+            }
+        );
+
+        $this->app
+            ->when(LabsmobileSmsSender::class)
+            ->needs(ClientInterface::class)
+            ->give(fn (): GuzzleClient => $this->app->make('bird-flock.labsmobile.http'));
+
+        $this->app->singleton(SenderResolver::class);
 
         // Bind metrics collector implementation (default no-op logger-backed).
         $this->app->bind(
@@ -143,6 +185,11 @@ class BirdFlockServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
+        $this->loadRoutesFrom(__DIR__ . '/../routes/twilio.php');
+        $this->loadRoutesFrom(__DIR__ . '/../routes/vonage.php');
+        $this->loadRoutesFrom(__DIR__ . '/../routes/sendgrid.php');
+        $this->loadRoutesFrom(__DIR__ . '/../routes/mailgun.php');
+        $this->loadRoutesFrom(__DIR__ . '/../routes/labsmobile.php');
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
 
         // Run centralized config validation. Throwing validations will
@@ -158,7 +205,32 @@ class BirdFlockServiceProvider extends ServiceProvider
 
         $this->publishes([
             __DIR__ . '/../config/bird-flock.php' => config_path('bird-flock.php'),
+            __DIR__ . '/../config/bird-flock-twilio.php' => config_path('bird-flock-twilio.php'),
+            __DIR__ . '/../config/bird-flock-vonage.php' => config_path('bird-flock-vonage.php'),
+            __DIR__ . '/../config/bird-flock-sendgrid.php' => config_path('bird-flock-sendgrid.php'),
+            __DIR__ . '/../config/bird-flock-mailgun.php' => config_path('bird-flock-mailgun.php'),
+            __DIR__ . '/../config/bird-flock-labsmobile.php' => config_path('bird-flock-labsmobile.php'),
         ], 'bird-flock-config');
+
+        $this->publishes([
+            __DIR__ . '/../config/bird-flock-twilio.php' => config_path('bird-flock-twilio.php'),
+        ], 'bird-flock-twilio-config');
+
+        $this->publishes([
+            __DIR__ . '/../config/bird-flock-vonage.php' => config_path('bird-flock-vonage.php'),
+        ], 'bird-flock-vonage-config');
+
+        $this->publishes([
+            __DIR__ . '/../config/bird-flock-sendgrid.php' => config_path('bird-flock-sendgrid.php'),
+        ], 'bird-flock-sendgrid-config');
+
+        $this->publishes([
+            __DIR__ . '/../config/bird-flock-mailgun.php' => config_path('bird-flock-mailgun.php'),
+        ], 'bird-flock-mailgun-config');
+
+        $this->publishes([
+            __DIR__ . '/../config/bird-flock-labsmobile.php' => config_path('bird-flock-labsmobile.php'),
+        ], 'bird-flock-labsmobile-config');
 
         $this->publishes([
             __DIR__ . '/../database/migrations' => database_path('migrations/bird-flock'),

@@ -3,7 +3,7 @@
 namespace Equidna\BirdFlock\Tests\Messaging\Senders;
 
 use Equidna\BirdFlock\DTO\FlightPlan;
-use Equidna\BirdFlock\Senders\TwilioSmsSender;
+use Equidna\BirdFlock\Senders\Twilio\TwilioSmsSender;
 use Equidna\BirdFlock\Tests\Support\TwilioMessageListFake;
 use Exception;
 use PHPUnit\Framework\TestCase;

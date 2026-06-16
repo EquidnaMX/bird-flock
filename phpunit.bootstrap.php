@@ -82,13 +82,51 @@ $configArray = [
             'prefix' => 'bird_flock_',
             'outbound_messages' => 'bird_flock_outbound_messages',
         ],
-        'twilio' => [
-            'auth_token' => null,
+        'channels' => [
+            'sms' => [
+                'strategy' => 'round_robin',
+                'retry' => [
+                    'max_attempts' => 3,
+                    'base_delay_ms' => 1000,
+                    'max_delay_ms' => 60000,
+                ],
+                'senders' => [
+                    'twilio' => \Equidna\BirdFlock\Senders\Twilio\TwilioSmsSenderDefinition::class,
+                ],
+            ],
+            'whatsapp' => [
+                'strategy' => 'round_robin',
+                'retry' => [
+                    'max_attempts' => 3,
+                    'base_delay_ms' => 1000,
+                    'max_delay_ms' => 60000,
+                ],
+                'senders' => [
+                    'twilio' => \Equidna\BirdFlock\Senders\Twilio\TwilioWhatsappSenderDefinition::class,
+                ],
+            ],
+            'email' => [
+                'strategy' => 'round_robin',
+                'retry' => [
+                    'max_attempts' => 3,
+                    'base_delay_ms' => 1000,
+                    'max_delay_ms' => 60000,
+                ],
+                'senders' => [
+                    'mailgun' => \Equidna\BirdFlock\Senders\Mailgun\MailgunEmailSenderDefinition::class,
+                ],
+            ],
         ],
-        'sendgrid' => [
-            'require_signed_webhooks' => false,
-            'webhook_public_key' => null,
-        ],
+    ],
+    'bird-flock-twilio' => [
+        'auth_token' => null,
+    ],
+    'bird-flock-sendgrid' => [
+        'require_signed_webhooks' => false,
+        'webhook_public_key' => null,
+    ],
+    'bird-flock-mailgun' => [
+        'templates' => [],
     ],
 ];
 
@@ -116,7 +154,12 @@ $container->instance(EventsContract::class, $events);
 Event::setFacadeApplication($container);
 
 // Bind a simple in-memory cache for testing (ArrayStore).
-$cache = new \Illuminate\Cache\ArrayStore();
+$cache = new class (new \Illuminate\Cache\ArrayStore()) extends \Illuminate\Cache\Repository {
+    public function refreshEventDispatcher(): void
+    {
+        //
+    }
+};
 $container->instance('cache', $cache);
 $container->instance('cache.store', $cache);
 
