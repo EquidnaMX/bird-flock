@@ -13,6 +13,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [1.5.0] - 2026-06-16 - "Osprey"
+
+### Added
+
+- **`DatabaseConnection` helper** (`src/Support/DatabaseConnection.php`): Centralized static helper that routes all package database operations through a configurable connection. Exposes `connection()`, `schema()`, `table()`, `transaction()`, and `raw()` methods.
+- **Configurable database connection**: New `bird-flock.database.connection` config key and `BIRD_FLOCK_DB_CONNECTION` environment variable allow the package to operate against a non-default database connection, enabling multi-tenancy and split-database architectures.
+- **Performance indexes on `outbound_messages` table**: Six new composite and single-column indexes added to improve query performance for common access patterns:
+  - `idx_channel_status_queued_at` on `(channel, status, queuedAt)`
+  - `idx_channel_created_at` on `(channel, createdAt)`
+  - `idx_template_created_at` on `(templateKey, createdAt)`
+  - `idx_recipient_channel_created` on `(to, channel, createdAt)`
+- **Performance indexes on `dead_letter_entries` table**: Two new composite indexes:
+  - `idx_dlq_error_created` on `(error_code, created_at)`
+  - `idx_dlq_channel_error_created` on `(channel, error_code, created_at)`
+- **New test coverage**: `ConfiguredDatabaseConnectionFeatureTest` (feature), `DatabaseConnectionTest` (unit), and `DatabaseConnectionModelTest` (unit) verify configurable-connection and migration behavior.
+
+### Changed
+
+- **Migrations**: Both `create_outbound_messages_table.php` and `create_dead_letter_entries_table.php` now use `DatabaseConnection::schema()` instead of `Illuminate\Support\Facades\Schema` to respect the configured connection.
+- **Models**: `OutboundMessage` and `DeadLetterEntry` now resolve their connection name via `DatabaseConnection::name()`.
+- **`EloquentOutboundMessageRepository`**: Uses `DatabaseConnection::table()` and `DatabaseConnection::transaction()`.
+- **`HealthService`**: Uses `DatabaseConnection::connection()` for health-check queries.
+- **`DeadLetterStatsCommand`**: Uses `DatabaseConnection` for statistics queries.
+- **`BirdFlock` core**: Uses `DatabaseConnection::transaction()` for atomic operations.
+- **`config/bird-flock.php`**: Added `database.connection` key (defaults to `null` = Laravel default connection).
+- **`.env.example`**: Added `BIRD_FLOCK_DB_CONNECTION` example entry.
+- **`phpunit.bootstrap.php`**: Updated to set up the configured connection for test runs.
+- **Documentation**: `deployment-instructions.md` and `README.md` updated with database connection configuration guidance.
+
+### Fixed
+
+- N/A
+
+### Security
+
+- No security-related changes in this release.
+
+### Breaking Changes
+
+- None. This release is **fully backward-compatible**. When `BIRD_FLOCK_DB_CONNECTION` is not set (the default), the package continues to use Laravel's default database connection — identical behavior to v1.4.0 and earlier.
+
+---
+
 ## [1.4.0] - 2026-06-15 - "Hawk"
 
 ### Added

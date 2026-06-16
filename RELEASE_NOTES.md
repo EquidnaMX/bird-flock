@@ -1,3 +1,60 @@
+# Release v1.5.0 "Osprey"
+
+Bird Flock v1.5.0 delivers database flexibility and query performance improvements. The Osprey — famous for precision diving and environmental adaptability — reflects a release that lets the package adapt to any database topology while sharpening query speed.
+
+**Release Date**: 2026-06-16
+**Codename**: Osprey
+**Version**: 1.5.0
+
+## Highlights
+
+- 🗄️ **Configurable database connection**: Run Bird Flock against any named Laravel database connection via `BIRD_FLOCK_DB_CONNECTION`. Perfect for split-database or multi-tenant architectures.
+- ⚡ **Performance indexes**: 6 new composite indexes on `outbound_messages` and 2 on `dead_letter_entries` accelerate the most common monitoring, retry, and analytics queries.
+- 🔧 **`DatabaseConnection` helper**: A clean, centralized utility replaces scattered `DB::` / `Schema::` facade calls throughout migrations, models, repositories, services, and commands.
+- 🧪 **Full test coverage**: Feature and unit tests verify the configurable-connection path end-to-end.
+- ✅ **Fully backward-compatible**: Zero migration required — omitting `BIRD_FLOCK_DB_CONNECTION` preserves existing behavior exactly.
+
+## Added
+
+- `src/Support/DatabaseConnection.php` — static helper with `connection()`, `schema()`, `table()`, `transaction()`, `raw()`, and `name()` methods.
+- `bird-flock.database.connection` config key (env: `BIRD_FLOCK_DB_CONNECTION`).
+- New indexes on `outbound_messages`:
+  - `idx_channel_status_queued_at` on `(channel, status, queuedAt)`
+  - `idx_channel_created_at` on `(channel, createdAt)`
+  - `idx_template_created_at` on `(templateKey, createdAt)`
+  - `idx_recipient_channel_created` on `(to, channel, createdAt)`
+- New indexes on `dead_letter_entries`:
+  - `idx_dlq_error_created` on `(error_code, created_at)`
+  - `idx_dlq_channel_error_created` on `(channel, error_code, created_at)`
+- Tests: `ConfiguredDatabaseConnectionFeatureTest`, `DatabaseConnectionTest`, `DatabaseConnectionModelTest`.
+
+## Changed
+
+- Migrations, models, repositories, services, console command, and core `BirdFlock` class all route DB operations through `DatabaseConnection`.
+- `config/bird-flock.php` extended with `database.connection`.
+- `.env.example` documents the new env variable.
+- `phpunit.bootstrap.php` updated for the configurable connection test setup.
+- `deployment-instructions.md` and `README.md` updated.
+
+## Fixed
+
+- N/A
+
+## Security
+
+No security-related changes in this release.
+
+## Breaking Changes
+
+None. See [BREAKING_CHANGES.md](BREAKING_CHANGES.md) for the full policy and v1.5.0 migration notes.
+
+## Links
+
+- Full history: [CHANGELOG.md](CHANGELOG.md)
+- Migration guide: [BREAKING_CHANGES.md](BREAKING_CHANGES.md)
+
+---
+
 # Release v1.4.0 "Hawk"
 
 Bird Flock v1.4.0 introduces a flexible, vendor-agnostic sender architecture with support for multiple SMS and email providers per channel, plus a brand-new LabsMobile integration.

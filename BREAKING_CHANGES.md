@@ -6,6 +6,28 @@ This document tracks all breaking changes across versions of **Bird Flock** and 
 
 ---
 
+## Version 1.5.0 - "Osprey" (2026-06-16)
+
+### Summary
+
+**Status**: No breaking changes.
+
+This release introduces a configurable database connection helper, additional performance indexes on both package tables, and routes all internal DB operations through the new `DatabaseConnection` utility.
+
+#### Migration Steps
+
+**No migration is required.** When `BIRD_FLOCK_DB_CONNECTION` is unset, behavior is identical to previous versions. To adopt the new configurable connection:
+
+1. Set `BIRD_FLOCK_DB_CONNECTION=your_connection_name` in `.env` (optional).
+2. If you have already run the package migrations, **re-run them** after publishing updated migration files to get the new performance indexes:
+   ```bash
+   php artisan vendor:publish --tag=bird-flock-migrations --force
+   php artisan migrate
+   ```
+   > **Note**: Adding indexes to existing tables is non-destructive. If you prefer not to re-run migrations, the application will continue to function correctly — the new indexes are performance optimizations only.
+
+---
+
 ## Version 1.4.0 - "Hawk" (2026-06-15)
 
 ### Summary
