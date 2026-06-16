@@ -36,8 +36,62 @@ External integrations:
 
 - Twilio (`twilio/sdk`) for SMS and WhatsApp senders.
 - Vonage (`vonage/client`) available as SMS provider implementation.
+- LabsMobile HTTP/POST API available as SMS provider implementation.
 - SendGrid (`sendgrid/sendgrid`) available as email provider implementation.
 - Mailgun (`mailgun/mailgun-php`) available as email provider implementation.
+
+## Config-Driven Senders
+
+Bird Flock resolves outbound senders from `config/bird-flock.php`. Each channel has a `senders`
+map keyed by vendor id; that key is used for routing, logs, health checks, and circuit labels.
+
+Simple external sender:
+
+```php
+'channels' => [
+    'sms' => [
+        'strategy' => 'round_robin',
+        'retry' => [
+            'max_attempts' => env('BIRD_FLOCK_SMS_MAX_ATTEMPTS', 3),
+            'base_delay_ms' => env('BIRD_FLOCK_SMS_BASE_DELAY_MS', 1000),
+            'max_delay_ms' => env('BIRD_FLOCK_SMS_MAX_DELAY_MS', 60000),
+        ],
+        'senders' => [
+            'acme' => App\Messaging\AcmeSmsSender::class,
+        ],
+    ],
+],
+```
+
+Typed constructor dependencies are resolved through the Laravel container. For constructor scalars or
+package-specific validation, use a sender definition class:
+
+```php
+'acme' => App\Messaging\AcmeSmsSenderDefinition::class
+```
+
+Definition classes implement `Equidna\BirdFlock\Contracts\SenderDefinitionInterface` and return the
+sender class, constructor arguments, and optional config validator. Argument values prefixed with
+`config:` are read from Laravel config; raw values are passed as-is.
+
+Definitions can also implement `Equidna\BirdFlock\Contracts\SenderConfigValidatorInterface`; in that
+case `validator()` can return `self::class` so metadata and config validation stay together.
+
+`strategy` controls which sender key is selected when a channel has multiple senders. The default is
+`round_robin`, which rotates through the configured sender keys in order using Laravel cache.
+`random` selects one configured sender with `random_int`. Any other value fails configuration at
+runtime with an `InvalidArgumentException`.
+
+For complex SDK construction, bind the SDK or sender in the host app and keep the same config shape:
+
+```php
+$this->app->singleton(App\Messaging\AcmeClient::class, function () {
+    return new App\Messaging\AcmeClient(config('services.acme.api_key'));
+});
+```
+
+External sender classes must implement `Equidna\BirdFlock\Contracts\MessageSenderInterface`.
+External webhooks remain the host app's responsibility.
 
 ## Quick Start (High-Level)
 

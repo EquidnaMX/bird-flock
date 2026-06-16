@@ -5,12 +5,12 @@
  *
  * PHP 8.1+
  *
- * @package   Equidna\BirdFlock\Senders
+ * @package   Equidna\BirdFlock\Senders\Sendgrid
  * @author    Gabriel Ruelas <gruelas@gruelas.com>
  * @license   https://opensource.org/licenses/MIT MIT License
  */
 
-namespace Equidna\BirdFlock\Senders;
+namespace Equidna\BirdFlock\Senders\Sendgrid;
 
 use SendGrid;
 use SendGrid\Mail\Mail;
@@ -234,3 +234,4 @@ final class SendgridEmailSender implements MessageSenderInterface
         }
     }
 }
+

@@ -13,6 +13,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [1.4.0] - 2026-06-15 - "Hawk"
+
+### Added
+
+- **Vendor-based sender configuration**: New per-vendor config files (`bird-flock-twilio.php`, `bird-flock-vonage.php`, `bird-flock-sendgrid.php`, `bird-flock-mailgun.php`, `bird-flock-labsmobile.php`) for modular vendor setup.
+- **Multi-sender support per channel**: `channels.*.senders` configuration with vendor keys allows multiple providers for the same channel (SMS, email).
+- **Sender selection strategies**: New `channels.*.strategy` setting supporting `round_robin` (default) and `random` vendor selection.
+- **SenderDefinitionInterface and SenderConfigValidatorInterface**: New contracts for vendor sender definitions with optional config validation.
+- **LabsMobile SMS provider**: Complete LabsMobile HTTP client integration, `LabsmobileSmsSender`, webhook controller, and route handler.
+- **Vendor-specific webhook routes**: Separate route files per provider (`routes/twilio.php`, `routes/vonage.php`, etc.) for cleaner organization and targeted handling.
+- **SenderResolver and VendorSelector services**: New support classes for runtime sender construction and vendor selection logic.
+- **Enhanced HealthService**: Extended diagnostics including per-vendor circuit-breaker state and sender availability checks.
+- **Batch FlightPlan deduplication**: BirdFlock now deduplicates idempotency keys in batch mode before enqueue.
+
+### Changed
+
+- **Sender directory structure**: Senders reorganized into vendor-specific folders (`src/Senders/Twilio/`, `src/Senders/Vonage/`, etc.) for improved organization.
+- **MessageFactory**: Refactored to delegate vendor selection and sender instantiation to `SenderResolver`.
+- **BirdFlockServiceProvider**: Now merges and publishes per-vendor config files and binds vendor-specific HTTP clients.
+- **ConfigValidator**: Extended to validate `channels.*.senders` configuration, strategies, and sender definitions.
+- **Documentation**: Updated README, deployment instructions, API documentation, and routes documentation to reflect vendor-based routing and multi-sender strategies.
+- **.env.example**: Added vendor environment variable examples for all providers.
+
+### Fixed
+
+- Webhook controller routing is now vendor-specific and less prone to conflicts.
+- Sender construction is more testable through `SenderDefinitionInterface` implementations.
+- Configuration validation catches misconfigured strategies early.
+
+### Security
+
+- No security-related changes in this release.
+
+### Breaking Changes
+
+- None. This release is **fully backward-compatible**. Existing single-sender configurations continue to work unchanged.
+
+---
+
 ## [1.3.0] - 2026-06-05 - "Falcon"
 
 ### Added

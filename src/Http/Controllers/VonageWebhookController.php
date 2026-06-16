@@ -183,8 +183,8 @@ final class VonageWebhookController extends Controller
      */
     private function guardRequest(Request $request): ?Response
     {
-        $signatureSecret = config('bird-flock.vonage.signature_secret');
-        $requireSigned = config('bird-flock.vonage.require_signed_webhooks', true);
+        $signatureSecret = config('bird-flock-vonage.signature_secret');
+        $requireSigned = config('bird-flock-vonage.require_signed_webhooks', true);
 
         if ($requireSigned && !$signatureSecret) {
             Logger::error('bird-flock.webhook.vonage.missing_signature_secret');

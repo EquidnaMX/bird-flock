@@ -5,12 +5,12 @@
  *
  * PHP 8.1+
  *
- * @package   Equidna\BirdFlock\Senders
+ * @package   Equidna\BirdFlock\Senders\Twilio
  * @author    Gabriel Ruelas <gruelas@gruelas.com>
  * @license   https://opensource.org/licenses/MIT MIT License
  */
 
-namespace Equidna\BirdFlock\Senders;
+namespace Equidna\BirdFlock\Senders\Twilio;
 
 use Twilio\Rest\Client;
 use Equidna\BirdFlock\Contracts\MessageSenderInterface;
@@ -73,7 +73,7 @@ final class TwilioWhatsappSender implements MessageSenderInterface
         }
 
         try {
-            if (! config('bird-flock.twilio.sandbox_mode', false) && ! $payload->templateKey) {
+            if (! config('bird-flock-twilio.sandbox_mode', false) && ! $payload->templateKey) {
                 return ProviderSendResult::undeliverable(
                     errorCode: 'TEMPLATE_REQUIRED',
                     errorMessage: 'Template key is required in production mode',
@@ -84,8 +84,8 @@ final class TwilioWhatsappSender implements MessageSenderInterface
                 'from' => $this->from,
             ];
 
-            if (config('bird-flock.twilio.sandbox_mode', false)) {
-                $configuredSandbox = config('bird-flock.twilio.sandbox_from');
+            if (config('bird-flock-twilio.sandbox_mode', false)) {
+                $configuredSandbox = config('bird-flock-twilio.sandbox_from');
                 $effectiveSandboxFrom = $configuredSandbox ?: $this->from;
 
                 if (! str_starts_with((string) $effectiveSandboxFrom, 'whatsapp:')) {
@@ -203,3 +203,4 @@ final class TwilioWhatsappSender implements MessageSenderInterface
         }
     }
 }
+

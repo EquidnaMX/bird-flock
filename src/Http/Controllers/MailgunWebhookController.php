@@ -139,8 +139,8 @@ final class MailgunWebhookController extends Controller
      */
     private function guardRequest(Request $request): ?Response
     {
-        $signingKey = config('bird-flock.mailgun.webhook_signing_key');
-        $requireSigned = config('bird-flock.mailgun.require_signed_webhooks', true);
+        $signingKey = config('bird-flock-mailgun.webhook_signing_key');
+        $requireSigned = config('bird-flock-mailgun.require_signed_webhooks', true);
 
         if ($requireSigned && !$signingKey) {
             Logger::error('bird-flock.webhook.mailgun.missing_signing_key');

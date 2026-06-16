@@ -17,7 +17,7 @@ use Equidna\BirdFlock\DTO\FlightPlan;
 use Equidna\BirdFlock\DTO\ProviderSendResult;
 use Equidna\BirdFlock\Jobs\SendEmailJob;
 use Equidna\BirdFlock\MessageFactory;
-use Equidna\BirdFlock\Senders\SendgridEmailSender;
+use Equidna\BirdFlock\Senders\Sendgrid\SendgridEmailSender;
 use Equidna\BirdFlock\Support\DeadLetterService;
 use Equidna\BirdFlock\Tests\TestCase;
 

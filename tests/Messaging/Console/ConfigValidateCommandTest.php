@@ -31,8 +31,8 @@ final class ConfigValidateCommandTest extends TestCase
         $cmd->setOutput($style);
 
         // Ensure Twilio credentials are missing
-        $this->setConfigValue('bird-flock.twilio.account_sid', null);
-        $this->setConfigValue('bird-flock.twilio.auth_token', null);
+        $this->setConfigValue('bird-flock-twilio.account_sid', null);
+        $this->setConfigValue('bird-flock-twilio.auth_token', null);
 
         $logger = new InMemoryLogger();
         Container::getInstance()->instance('bird-flock.logger', $logger);
@@ -40,7 +40,7 @@ final class ConfigValidateCommandTest extends TestCase
         $code = $cmd->handle();
 
         $this->assertSame(0, $code);
-        $this->assertTrue($logger->has('bird-flock.twilio.credentials_missing'));
+        $this->assertTrue($logger->has('bird-flock-twilio.credentials_missing'));
     }
 
     public function testReturnsZeroWhenValidAndEmitsWarnings(): void
@@ -51,11 +51,11 @@ final class ConfigValidateCommandTest extends TestCase
         $cmd->setOutput($style);
 
         // Provide required Twilio creds
-        $this->setConfigValue('bird-flock.twilio.account_sid', 'AC123');
-        $this->setConfigValue('bird-flock.twilio.auth_token', 'secret');
+        $this->setConfigValue('bird-flock-twilio.account_sid', 'AC123');
+        $this->setConfigValue('bird-flock-twilio.auth_token', 'secret');
 
         // Provide minimal SendGrid so it does not fatal
-        $this->setConfigValue('bird-flock.sendgrid.api_key', 'SG.x');
+        $this->setConfigValue('bird-flock-sendgrid.api_key', 'SG.x');
 
         Container::getInstance()->instance('bird-flock.logger', new InMemoryLogger());
 

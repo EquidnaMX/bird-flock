@@ -6,6 +6,24 @@ This document tracks all breaking changes across versions of **Bird Flock** and 
 
 ---
 
+## Version 1.4.0 - "Hawk" (2026-06-15)
+
+### Summary
+
+**Status**: No breaking changes.
+
+This release introduces vendor-based sender configuration, multi-sender support per channel, and LabsMobile provider integration while maintaining full backward compatibility.
+
+#### Migration Steps
+
+**No migration is required.** Existing configurations continue to work without modification. The new vendor-based config system is optional:
+
+- Single-sender setups (e.g., `config/bird-flock.php` with hardcoded Twilio/Mailgun) remain operational.
+- To adopt the new vendor-based routing, gradually migrate to per-vendor config files and define `channels.*.senders` in your main config.
+- See README and deployment documentation for examples of vendor-based configurations.
+
+---
+
 ## Version 1.3.0 - "Falcon" (2026-06-05)
 
 ### Summary
@@ -37,40 +55,33 @@ This is the first stable release of Bird Flock. As this is the initial version, 
 A breaking change is any modification that:
 
 1. **Removes or renames public API methods, classes, or interfaces**
-
    - Example: Removing `BirdFlock::send()` method
    - Example: Renaming `FlightPlan` class to `MessagePayload`
 
 2. **Changes method signatures in non-backward-compatible ways**
-
    - Example: Changing required parameter order
    - Example: Removing optional parameters
    - Example: Changing parameter types without union type support
 
 3. **Modifies database schema without migration path**
-
    - Example: Renaming table columns
    - Example: Changing column types incompatibly
    - Example: Removing columns
 
 4. **Changes configuration structure incompatibly**
-
    - Example: Renaming config keys
    - Example: Changing config value formats (string → array)
    - Example: Removing config options
 
 5. **Changes event payload structures**
-
    - Example: Removing fields from `MessageQueued` event
    - Example: Changing event constructor signatures
 
 6. **Changes minimum PHP or Laravel version requirements**
-
    - Example: Upgrading from PHP 8.3 to PHP 8.4
    - Example: Requiring Laravel 12.x minimum
 
 7. **Changes behavior of idempotency keys**
-
    - Example: Changing key format requirements
    - Example: Altering deduplication logic
 

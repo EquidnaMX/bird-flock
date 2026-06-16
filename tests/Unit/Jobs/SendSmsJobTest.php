@@ -17,7 +17,7 @@ use Equidna\BirdFlock\DTO\FlightPlan;
 use Equidna\BirdFlock\DTO\ProviderSendResult;
 use Equidna\BirdFlock\Jobs\SendSmsJob;
 use Equidna\BirdFlock\MessageFactory;
-use Equidna\BirdFlock\Senders\TwilioSmsSender;
+use Equidna\BirdFlock\Senders\Twilio\TwilioSmsSender;
 use Equidna\BirdFlock\Support\DeadLetterService;
 use Equidna\BirdFlock\Tests\TestCase;
 use Illuminate\Support\Facades\Event;

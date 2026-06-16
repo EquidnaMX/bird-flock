@@ -12,7 +12,11 @@
 
 namespace Equidna\BirdFlock\Support;
 
-use RuntimeException;
+use Equidna\BirdFlock\Contracts\MessageSenderInterface;
+use Equidna\BirdFlock\Contracts\SenderConfigValidatorInterface;
+use InvalidArgumentException;
+use ReflectionClass;
+use ReflectionNamedType;
 
 /**
  * Validates runtime configuration for Bird Flock.
@@ -24,17 +28,16 @@ final class ConfigValidator
     /**
      * Validate all configured settings.
      *
-     * Throws RuntimeException on fatal missing credentials; otherwise emits
+     * Throws on invalid sender structure; missing credentials are emitted as
      * warnings via the package logger.
      *
      * @return void
-     * @throws \RuntimeException When critical credentials are missing
+     * @throws \InvalidArgumentException When sender configuration is invalid
      */
     public function validateAll(): void
     {
         $this->validateCore();
-        $this->validateTwilio();
-        $this->validateSendgrid();
+        $this->validateConfiguredSenders();
     }
 
     /**
@@ -59,84 +62,167 @@ final class ConfigValidator
         }
     }
 
-    /**
-     * Validate Twilio credentials and From/Messaging Service configuration.
-     *
-     * @return void
-     */
-    private function validateTwilio(): void
+    private function validateConfiguredSenders(): void
     {
-        $accountSid = config('bird-flock.twilio.account_sid');
-        $authToken = config('bird-flock.twilio.auth_token');
+        $channels = config('bird-flock.channels', []);
 
-        if (! $accountSid || ! $authToken) {
-            Logger::warning('bird-flock.twilio.credentials_missing', [
-                'hint' => 'Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN to enable Twilio services',
+        if (! is_array($channels) || $channels === []) {
+            Logger::warning('bird-flock.config.channels_missing', [
+                'hint' => 'Configure at least one channel in bird-flock.channels',
             ]);
             return;
         }
 
-        $messagingService = config('bird-flock.twilio.messaging_service_sid');
-        $fromSms = config('bird-flock.twilio.from_sms');
-        $fromWhatsApp = config('bird-flock.twilio.from_whatsapp');
-        $sandboxMode = config('bird-flock.twilio.sandbox_mode', false);
-        $sandboxFrom = config('bird-flock.twilio.sandbox_from');
+        $resolver = new SenderResolver();
+        $vendorSelector = new VendorSelector();
 
-        if (! $messagingService && ! $fromSms) {
-            Logger::warning('bird-flock.twilio.sms_sender_not_configured', [
-                'hint' => 'Set TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM_SMS to enable SMS sends',
-            ]);
-        }
-
-        if (! $fromWhatsApp) {
-            if (! $sandboxMode) {
-                Logger::warning('bird-flock.twilio.whatsapp_sender_missing', [
-                    'hint' => 'Set TWILIO_FROM_WHATSAPP when using WhatsApp in production',
-                ]);
-            } else {
-                Logger::info('bird-flock.twilio.whatsapp_sandbox_no_from', [
-                    'hint' => 'Sandbox mode: WhatsApp FROM may be inferred from TWILIO_FROM_WHATSAPP',
-                ]);
+        foreach ($channels as $channel => $channelConfig) {
+            if (! is_string($channel) || trim($channel) === '' || ! is_array($channelConfig)) {
+                throw new InvalidArgumentException('Bird Flock channel configuration keys must be non-empty strings');
             }
-        }
 
-        if ($sandboxFrom && ! str_starts_with((string) $sandboxFrom, 'whatsapp:')) {
-            Logger::warning('bird-flock.twilio.sandbox_from_missing_prefix', [
-                'value' => $sandboxFrom,
-                'hint' => 'WhatsApp sandbox From should include the "whatsapp:" prefix',
-            ]);
+            $senderDefinitions = [];
+
+            if (array_key_exists('senders', $channelConfig)) {
+                if (! is_array($channelConfig['senders']) || $channelConfig['senders'] === []) {
+                    throw new InvalidArgumentException(
+                        "Channel '{$channel}' must define at least one sender"
+                    );
+                }
+
+                $senderDefinitions = $channelConfig['senders'];
+            } elseif (array_key_exists('vendors', $channelConfig)) {
+                $vendors = $vendorSelector->normalizeVendors($channelConfig['vendors']);
+
+                if ($vendors === []) {
+                    throw new InvalidArgumentException(
+                        "Channel '{$channel}' must define at least one legacy vendor"
+                    );
+                }
+
+                Logger::info('bird-flock.config.legacy_vendors_used', [
+                    'channel' => $channel,
+                    'hint' => 'Replace vendors with senders keyed by vendor for config-driven sender resolution',
+                ]);
+
+                foreach ($vendors as $vendor) {
+                    $senderDefinitions[$vendor] = $resolver->senderDefinition($channel, $vendor);
+                }
+            } else {
+                throw new InvalidArgumentException(
+                    "Channel '{$channel}' must define senders"
+                );
+            }
+
+            foreach ($senderDefinitions as $vendor => $definition) {
+                if (! is_string($vendor) || trim($vendor) === '') {
+                    throw new InvalidArgumentException(
+                        "Channel '{$channel}' sender keys must be non-empty vendor names"
+                    );
+                }
+
+                $normalized = $resolver->normalizeSenderDefinition($channel, $vendor, $definition);
+                $this->validateSenderClass($channel, $vendor, $normalized);
+                $this->validateRequiredArguments($channel, $vendor, $normalized);
+                $this->runSenderValidator($channel, $vendor, $normalized);
+            }
         }
     }
 
     /**
-     * Validate SendGrid webhook signing and From email configuration.
-     *
-     * @return void
+     * @param array{sender: class-string, arguments?: array<string, mixed>, validator?: class-string} $definition
      */
-    private function validateSendgrid(): void
+    private function validateSenderClass(string $channel, string $vendor, array $definition): void
     {
-        $requireSigned = config('bird-flock.sendgrid.require_signed_webhooks');
-        $publicKey     = config('bird-flock.sendgrid.webhook_public_key');
+        if (! is_subclass_of($definition['sender'], MessageSenderInterface::class)) {
+            throw new InvalidArgumentException(
+                "Sender '{$vendor}' for channel '{$channel}' must implement " . MessageSenderInterface::class
+            );
+        }
+    }
 
-        if ($requireSigned && ! $publicKey) {
-            Logger::warning('bird-flock.sendgrid.webhook_signing_key_missing', [
-                'hint' => 'Set SENDGRID_WEBHOOK_PUBLIC_KEY or disable SENDGRID_REQUIRE_SIGNED_WEBHOOKS',
-            ]);
+    /**
+     * @param array{sender: class-string, arguments?: array<string, mixed>, validator?: class-string} $definition
+     */
+    private function validateRequiredArguments(string $channel, string $vendor, array $definition): void
+    {
+        $constructor = (new ReflectionClass($definition['sender']))->getConstructor();
+
+        if ($constructor === null) {
+            return;
         }
 
-        if (! $requireSigned && ! $publicKey) {
-            Logger::info('bird-flock.sendgrid.webhook_signing_disabled');
+        $arguments = $definition['arguments'] ?? [];
+
+        foreach ($constructor->getParameters() as $parameter) {
+            if (array_key_exists($parameter->getName(), $arguments)) {
+                $this->warnWhenRequiredConfigReferenceIsNull(
+                    $channel,
+                    $vendor,
+                    $parameter->getName(),
+                    $arguments[$parameter->getName()],
+                    $parameter->allowsNull()
+                );
+                continue;
+            }
+
+            $type = $parameter->getType();
+            $isClassDependency = $type instanceof ReflectionNamedType && ! $type->isBuiltin();
+
+            if ($isClassDependency || $parameter->isDefaultValueAvailable() || $parameter->allowsNull()) {
+                continue;
+            }
+
+            throw new InvalidArgumentException(
+                "Sender '{$vendor}' for channel '{$channel}' is missing required constructor argument " .
+                    "'{$parameter->getName()}'"
+            );
+        }
+    }
+
+    private function warnWhenRequiredConfigReferenceIsNull(
+        string $channel,
+        string $vendor,
+        string $argument,
+        mixed $value,
+        bool $allowsNull
+    ): void {
+        if ($allowsNull || ! is_string($value) || ! str_starts_with($value, 'config:')) {
+            return;
         }
 
-        $fromEmail = config('bird-flock.sendgrid.from_email');
-        if (! $fromEmail) {
-            Logger::warning('bird-flock.sendgrid.from_email_missing', [
-                'hint' => 'Set SENDGRID_FROM_EMAIL to ensure proper envelope from address',
-            ]);
-        } elseif (! filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
-            Logger::warning('bird-flock.sendgrid.from_email_invalid', [
-                'value' => $fromEmail,
-            ]);
+        $configKey = substr($value, strlen('config:'));
+
+        if (config($configKey) !== null) {
+            return;
         }
+
+        Logger::warning('bird-flock.config.sender_argument_null', [
+            'channel' => $channel,
+            'vendor' => $vendor,
+            'argument' => $argument,
+            'config_key' => $configKey,
+            'hint' => 'Set the referenced config value before sending through this sender',
+        ]);
+    }
+
+    /**
+     * @param array{sender: class-string, arguments?: array<string, mixed>, validator?: class-string} $definition
+     */
+    private function runSenderValidator(string $channel, string $vendor, array $definition): void
+    {
+        if (! isset($definition['validator'])) {
+            return;
+        }
+
+        if (! is_subclass_of($definition['validator'], SenderConfigValidatorInterface::class)) {
+            throw new InvalidArgumentException(
+                "Validator for '{$channel}:{$vendor}' must implement " . SenderConfigValidatorInterface::class
+            );
+        }
+
+        /** @var SenderConfigValidatorInterface $validator */
+        $validator = app()->make($definition['validator']);
+        $validator->validate($channel, $vendor, $definition);
     }
 }

@@ -13,7 +13,7 @@
 namespace Equidna\BirdFlock\Tests\Unit\Senders;
 
 use Equidna\BirdFlock\DTO\FlightPlan;
-use Equidna\BirdFlock\Senders\TwilioWhatsappSender;
+use Equidna\BirdFlock\Senders\Twilio\TwilioWhatsappSender;
 use Equidna\BirdFlock\Tests\TestCase;
 use Twilio\Rest\Api\V2010\Account\MessageInstance;
 use Twilio\Rest\Api\V2010\Account\MessageList;

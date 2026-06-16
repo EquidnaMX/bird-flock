@@ -32,6 +32,7 @@ All webhook routes are nested under middleware `throttle:60,1`.
 | POST   | `/bird-flock/webhooks/vonage/delivery-receipt` | `bird-flock.vonage.dlr`      | `VonageWebhookController@deliveryReceipt` | `throttle:60,1` |
 | POST   | `/bird-flock/webhooks/vonage/inbound`          | `bird-flock.vonage.inbound`  | `VonageWebhookController@inbound`         | `throttle:60,1` |
 | POST   | `/bird-flock/webhooks/mailgun/events`          | `bird-flock.mailgun.events`  | `MailgunWebhookController@events`         | `throttle:60,1` |
+| GET    | `/bird-flock/webhooks/labsmobile/ack`          | `bird-flock.labsmobile.ack`  | `LabsmobileWebhookController@ack`         | `throttle:60,1` |
 
 ## Package Routing Notes
 

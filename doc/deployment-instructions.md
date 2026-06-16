@@ -10,6 +10,7 @@ This package runs inside a host Laravel application. Deployment requirements com
 - Queue worker infrastructure: required.
 - Cache backend: required for circuit-breaker state (Redis recommended).
 - Provider accounts as needed: Twilio, SendGrid, Vonage, Mailgun.
+- LabsMobile can be configured as an additional SMS provider.
 
 Package migrations create:
 - `bird_flock_outbound_messages` (prefix configurable).
@@ -37,6 +38,40 @@ BIRD_FLOCK_BATCH_INSERT_CHUNK_SIZE=500
 BIRD_FLOCK_WEBHOOK_RATE_LIMIT=60
 BIRD_FLOCK_HEALTH_ENABLED=true
 ```
+
+Sender selection is configured in `config/bird-flock.php` under `channels.*.senders`.
+The `senders` array is keyed by vendor id and each entry points to either a sender class implementing
+`MessageSenderInterface` or a definition class implementing `SenderDefinitionInterface`. Constructor
+arguments from definitions can use `config:some.key` references and are resolved through Laravel
+config before the sender is built.
+
+Example external SMS sender:
+
+```php
+'sms' => [
+    'strategy' => 'round_robin',
+    'retry' => [
+        'max_attempts' => env('BIRD_FLOCK_SMS_MAX_ATTEMPTS', 3),
+        'base_delay_ms' => env('BIRD_FLOCK_SMS_BASE_DELAY_MS', 1000),
+        'max_delay_ms' => env('BIRD_FLOCK_SMS_MAX_DELAY_MS', 60000),
+    ],
+    'senders' => [
+        'acme' => App\Messaging\AcmeSmsSenderDefinition::class,
+    ],
+],
+```
+
+Definition classes implement `SenderDefinitionInterface` and return the sender class, constructor
+arguments, and optional validator. Simple external senders can also be registered directly by class
+name when the container can resolve their constructor.
+
+`strategy` controls sender selection within a channel:
+- `round_robin` rotates through sender keys in config order and is the default.
+- `random` selects one configured sender using `random_int`.
+- Any other value throws `InvalidArgumentException`.
+
+A definition class may also implement `SenderConfigValidatorInterface`; internal providers use this
+to keep sender metadata and config validation in the same class.
 
 Provider variables (examples):
 
@@ -84,6 +119,19 @@ MAILGUN_WEBHOOK_SIGNING_KEY=YOUR_MAILGUN_SIGNING_KEY
 MAILGUN_REQUIRE_SIGNED_WEBHOOKS=true
 MAILGUN_WEBHOOK_URL=https://your-app.example.com/bird-flock/webhooks/mailgun/events
 MAILGUN_TIMEOUT=30
+
+# LabsMobile
+LABSMOBILE_USERNAME=YOUR_LABSMOBILE_USERNAME
+LABSMOBILE_TOKEN=YOUR_LABSMOBILE_TOKEN
+LABSMOBILE_FROM_SMS=YourBrand
+LABSMOBILE_ACK_URL=https://your-app.example.com/bird-flock/webhooks/labsmobile/ack
+LABSMOBILE_WEBHOOK_TOKEN=
+LABSMOBILE_TEST=false
+LABSMOBILE_LONG=false
+LABSMOBILE_UCS2=false
+LABSMOBILE_SHORTLINK=false
+LABSMOBILE_TIMEOUT=30
+LABSMOBILE_CONNECT_TIMEOUT=10
 ```
 
 Retry variables:

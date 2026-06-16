@@ -149,7 +149,7 @@ final class TwilioWebhookController extends Controller
      */
     private function guardRequest(Request $request): ?Response
     {
-        $authToken = config('bird-flock.twilio.auth_token');
+        $authToken = config('bird-flock-twilio.auth_token');
 
         if (!$authToken) {
             Logger::error('bird-flock.webhook.twilio.missing_auth_token');

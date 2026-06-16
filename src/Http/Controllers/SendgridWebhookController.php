@@ -131,8 +131,8 @@ final class SendgridWebhookController extends Controller
      */
     protected function isAuthorized(Request $request): bool
     {
-        $requireSigned = config('bird-flock.sendgrid.require_signed_webhooks', true);
-        $publicKey = config('bird-flock.sendgrid.webhook_public_key');
+        $requireSigned = config('bird-flock-sendgrid.require_signed_webhooks', true);
+        $publicKey = config('bird-flock-sendgrid.webhook_public_key');
 
         if ($requireSigned && !$publicKey) {
             throw new \RuntimeException('SendGrid webhook public key is required but not configured.');

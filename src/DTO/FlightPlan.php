@@ -133,6 +133,7 @@ final class FlightPlan
             'metadata'        => $this->metadata,
             'idempotency_key' => $this->idempotencyKey,
             'send_at'         => $this->sendAt?->format('Y-m-d\TH:i:s\Z'),
+            'sendAt'          => $this->sendAt?->format('Y-m-d\TH:i:s\Z'),
         ];
     }
 }
