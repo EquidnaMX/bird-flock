@@ -13,9 +13,9 @@
 namespace Equidna\BirdFlock\Console\Commands;
 
 use Equidna\BirdFlock\Models\DeadLetterEntry;
+use Equidna\BirdFlock\Support\DatabaseConnection;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Provides statistical analysis of dead-letter queue entries.
@@ -46,7 +46,7 @@ final class DeadLetterStatsCommand extends Command
 
         $tableName = config('bird-flock.dead_letter.table', 'bird_flock_dead_letters');
 
-        if (! DB::getSchemaBuilder()->hasTable($tableName)) {
+        if (! DatabaseConnection::schema()->hasTable($tableName)) {
             $this->error("Dead-letter table '{$tableName}' does not exist. Run migrations.");
 
             return self::FAILURE;
@@ -69,7 +69,7 @@ final class DeadLetterStatsCommand extends Command
         }
 
         // Channel breakdown
-        $byChannel = DeadLetterEntry::select('channel', DB::raw('count(*) as count'))
+        $byChannel = DeadLetterEntry::select('channel', DatabaseConnection::raw('count(*) as count'))
             ->where('created_at', '>=', $cutoff)
             ->groupBy('channel')
             ->orderByDesc('count')
@@ -87,7 +87,7 @@ final class DeadLetterStatsCommand extends Command
         $this->newLine();
 
         // Top error codes
-        $topErrors = DeadLetterEntry::select('error_code', DB::raw('count(*) as count'))
+        $topErrors = DeadLetterEntry::select('error_code', DatabaseConnection::raw('count(*) as count'))
             ->where('created_at', '>=', $cutoff)
             ->whereNotNull('error_code')
             ->groupBy('error_code')
@@ -107,7 +107,7 @@ final class DeadLetterStatsCommand extends Command
         $this->newLine();
 
         // Attempts distribution
-        $attemptStats = DeadLetterEntry::select('attempts', DB::raw('count(*) as count'))
+        $attemptStats = DeadLetterEntry::select('attempts', DatabaseConnection::raw('count(*) as count'))
             ->where('created_at', '>=', $cutoff)
             ->groupBy('attempts')
             ->orderBy('attempts')
@@ -125,8 +125,8 @@ final class DeadLetterStatsCommand extends Command
 
         // Time-series (daily histogram)
         $dailyStats = DeadLetterEntry::select(
-            DB::raw('DATE(created_at) as date'),
-            DB::raw('count(*) as count')
+            DatabaseConnection::raw('DATE(created_at) as date'),
+            DatabaseConnection::raw('count(*) as count')
         )
             ->where('created_at', '>=', $cutoff)
             ->groupBy('date')

@@ -1,8 +1,8 @@
 <?php
 
+use Equidna\BirdFlock\Support\DatabaseConnection;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     /**
@@ -17,7 +17,7 @@ return new class extends Migration {
             config('bird-flock.tables.prefix', 'bird_flock_') . 'outbound_messages'
         );
 
-        Schema::create($tableName, function (Blueprint $table) {
+        DatabaseConnection::schema()->create($tableName, function (Blueprint $table) {
             $table->char('id_outboundMessage', 26)->primary();
             $table->enum('channel', ['sms', 'whatsapp', 'email']);
             $table->string('to', 320);
@@ -70,6 +70,6 @@ return new class extends Migration {
             config('bird-flock.tables.prefix', 'bird_flock_') . 'outbound_messages'
         );
 
-        Schema::dropIfExists($tableName);
+        DatabaseConnection::schema()->dropIfExists($tableName);
     }
 };

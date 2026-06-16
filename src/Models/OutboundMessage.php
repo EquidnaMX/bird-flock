@@ -12,6 +12,7 @@
 
 namespace Equidna\BirdFlock\Models;
 
+use Equidna\BirdFlock\Support\DatabaseConnection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -77,5 +78,10 @@ class OutboundMessage extends Model
     public function getTable()
     {
         return config('bird-flock.tables.outbound_messages', parent::getTable());
+    }
+
+    public function getConnectionName()
+    {
+        return DatabaseConnection::name();
     }
 }

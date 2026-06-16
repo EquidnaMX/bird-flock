@@ -14,6 +14,10 @@
  */
 
 return [
+    'database' => [
+        'connection' => env('BIRD_FLOCK_DB_CONNECTION'),
+    ],
+
     'default_queue' => env('BIRD_FLOCK_DEFAULT_QUEUE', 'default'),
 
     'tables' => [

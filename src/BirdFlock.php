@@ -12,10 +12,6 @@
 
 namespace Equidna\BirdFlock;
 
-use Illuminate\Database\QueryException;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Str;
 use Equidna\BirdFlock\Contracts\MetricsCollectorInterface;
 use Equidna\BirdFlock\Contracts\OutboundMessageRepositoryInterface;
 use Equidna\BirdFlock\DTO\FlightPlan;
@@ -24,12 +20,16 @@ use Equidna\BirdFlock\Events\MessageDuplicateSkipped;
 use Equidna\BirdFlock\Events\MessageQueued;
 use Equidna\BirdFlock\Events\MessageRetryScheduled;
 use Equidna\BirdFlock\Jobs\DispatchMessageJob;
+use Equidna\BirdFlock\Support\DatabaseConnection;
 use Equidna\BirdFlock\Support\Logger;
 use Equidna\BirdFlock\Support\MailableConverter;
 use Equidna\BirdFlock\Support\Masking;
 use Equidna\BirdFlock\Support\MetricsCollector;
+use Illuminate\Database\QueryException;
 use Illuminate\Contracts\Mail\Mailable as MailableContract;
 use Illuminate\Mail\Mailable;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Str;
 
 /**
  * Orchestrates message dispatching with idempotency and routing.
@@ -287,7 +287,7 @@ final class BirdFlock
 
         $existingByIdempotencyKey = [];
         if ($idempotencyKeys !== []) {
-            $existingByIdempotencyKey = DB::table($tableName)
+            $existingByIdempotencyKey = DatabaseConnection::table($tableName)
                 ->whereIn('idempotencyKey', $idempotencyKeys)
                 ->pluck('id_outboundMessage', 'idempotencyKey')
                 ->toArray();
@@ -333,11 +333,11 @@ final class BirdFlock
 
         // Atomic batch insert with chunking to avoid DB packet size limits
         try {
-            DB::transaction(function () use ($dataToInsert, $payloadsToDispatch, $tableName) {
+            DatabaseConnection::transaction(function () use ($dataToInsert, $payloadsToDispatch, $tableName) {
                 $chunkSize = config('bird-flock.batch_insert_chunk_size', 500);
 
                 foreach (array_chunk($dataToInsert, $chunkSize) as $chunk) {
-                    DB::table($tableName)->insert($chunk);
+                    DatabaseConnection::table($tableName)->insert($chunk);
                 }
 
                 // Dispatch only newly-created jobs; existing idempotent messages are reused.

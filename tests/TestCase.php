@@ -37,6 +37,9 @@ abstract class TestCase extends BaseTestCase
 
         $repository = new Repository([
             'bird-flock' => [
+                'database' => [
+                    'connection' => null,
+                ],
                 'default_queue' => 'default',
                 'tables' => [
                     'prefix' => 'bird_flock_',

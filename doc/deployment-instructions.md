@@ -22,6 +22,7 @@ Core package variables:
 
 ```dotenv
 BIRD_FLOCK_DEFAULT_QUEUE=default
+BIRD_FLOCK_DB_CONNECTION=
 BIRD_FLOCK_TABLE_PREFIX=bird_flock_
 
 BIRD_FLOCK_LOGGING_ENABLED=true

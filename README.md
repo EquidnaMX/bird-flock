@@ -28,7 +28,7 @@ Version/runtime summary:
 
 Infrastructure model:
 
-- Database: package uses Eloquent models and migrations; supported by host Laravel DB driver (commonly MySQL/PostgreSQL/SQLite).
+- Database: package uses Eloquent models and migrations; supported by host Laravel DB driver (commonly MySQL/PostgreSQL/SQLite). Set `BIRD_FLOCK_DB_CONNECTION` to store package tables on a non-default Laravel connection.
 - Cache: package uses Laravel cache for circuit-breaker state.
 - Queue: package dispatches Laravel queue jobs; host queue driver is used.
 

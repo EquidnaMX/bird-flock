@@ -14,7 +14,7 @@ namespace Equidna\BirdFlock\Repositories;
 
 use Equidna\BirdFlock\Contracts\OutboundMessageRepositoryInterface;
 use Equidna\BirdFlock\Models\OutboundMessage;
-use Illuminate\Support\Facades\DB;
+use Equidna\BirdFlock\Support\DatabaseConnection;
 
 /**
  * Eloquent-based repository for outbound messages.
@@ -49,7 +49,7 @@ final class EloquentOutboundMessageRepository implements OutboundMessageReposito
         string $status,
         ?array $meta = null
     ): void {
-        DB::transaction(function () use ($id, $status, $meta) {
+        DatabaseConnection::transaction(function () use ($id, $status, $meta) {
             $message = OutboundMessage::where('providerMessageId', $id)
                 ->orWhere('id_outboundMessage', $id)
                 ->lockForUpdate()
@@ -114,7 +114,7 @@ final class EloquentOutboundMessageRepository implements OutboundMessageReposito
      */
     public function resetForRetry(string $id, array $data): void
     {
-        DB::transaction(function () use ($id, $data) {
+        DatabaseConnection::transaction(function () use ($id, $data) {
             $message = OutboundMessage::where('id_outboundMessage', $id)
                 ->lockForUpdate()
                 ->first();

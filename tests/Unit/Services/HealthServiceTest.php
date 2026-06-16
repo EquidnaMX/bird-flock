@@ -142,54 +142,59 @@ final class HealthServiceTest extends TestCase
     private function bindHealthyDatabase(): void
     {
         Container::getInstance()->instance('db', new class {
-            public function connection(): object
+            public function connection(?string $name = null): object
             {
                 return new class {
                     public function getPdo(): bool
                     {
                         return true;
                     }
-                };
-            }
 
-            public function getSchemaBuilder(): object
-            {
-                return new class {
                     public function hasTable(string $table): bool
                     {
                         return true;
+                    }
+
+                    public function getSchemaBuilder(): object
+                    {
+                        return $this;
+                    }
+
+                    public function table(string $table): object
+                    {
+                        return new class {
+                            public function count(): int
+                            {
+                                return 0;
+                            }
+
+                            public function select(mixed ...$columns): self
+                            {
+                                return $this;
+                            }
+
+                            public function groupBy(string $column): self
+                            {
+                                return $this;
+                            }
+
+                            public function pluck(string $column, string $key): object
+                            {
+                                return new class {
+                                    public function toArray(): array
+                                    {
+                                        return [];
+                                    }
+                                };
+                            }
+                        };
                     }
                 };
             }
 
             public function table(string $table): object
             {
-                return new class {
-                    public function count(): int
-                    {
-                        return 0;
-                    }
-
-                    public function select(mixed ...$columns): self
-                    {
-                        return $this;
-                    }
-
-                    public function groupBy(string $column): self
-                    {
-                        return $this;
-                    }
-
-                    public function pluck(string $column, string $key): object
-                    {
-                        return new class {
-                            public function toArray(): array
-                            {
-                                return [];
-                            }
-                        };
-                    }
-                };
+                return $this->connection()->table($table);
             }
         });
     }
@@ -197,7 +202,7 @@ final class HealthServiceTest extends TestCase
     private function bindFailingDatabase(): void
     {
         Container::getInstance()->instance('db', new class {
-            public function connection(): object
+            public function connection(?string $name = null): object
             {
                 return new class {
                     public function getPdo(): void
