@@ -12,9 +12,10 @@
 
 namespace Equidna\BirdFlock\Services;
 
+use Equidna\BirdFlock\Support\CircuitBreaker;
+use Equidna\BirdFlock\Support\DatabaseConnection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Equidna\BirdFlock\Support\CircuitBreaker;
 use Throwable;
 
 /**
@@ -225,9 +226,9 @@ final class HealthService
     private function checkDatabase(): array
     {
         try {
-            DB::connection()->getPdo();
+            DatabaseConnection::connection()->getPdo();
             $tableName = config('bird-flock.tables.outbound_messages');
-            $exists = DB::getSchemaBuilder()->hasTable($tableName);
+            $exists = DatabaseConnection::schema()->hasTable($tableName);
 
             return [
                 'healthy' => $exists,
@@ -527,13 +528,13 @@ final class HealthService
         try {
             $tableName = config('bird-flock.dead_letter.table', 'bird_flock_dead_letters');
 
-            if (! DB::getSchemaBuilder()->hasTable($tableName)) {
+            if (! DatabaseConnection::schema()->hasTable($tableName)) {
                 return ['count' => 0, 'by_channel' => []];
             }
 
-            $total = DB::table($tableName)->count();
-            $byChannel = DB::table($tableName)
-                ->select('channel', DB::raw('count(*) as count'))
+            $total = DatabaseConnection::table($tableName)->count();
+            $byChannel = DatabaseConnection::table($tableName)
+                ->select('channel', DatabaseConnection::raw('count(*) as count'))
                 ->groupBy('channel')
                 ->pluck('count', 'channel')
                 ->toArray();

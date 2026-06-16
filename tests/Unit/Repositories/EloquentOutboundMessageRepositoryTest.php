@@ -1,285 +1,158 @@
 <?php
 
-/**
- * Unit tests for EloquentOutboundMessageRepository.
- *
- * PHP 8.1+
- *
- * @package   Equidna\BirdFlock\Tests\Unit\Repositories
- * @author    Gabriel Ruelas <gruelas@gruelas.com>
- * @license   https://opensource.org/licenses/MIT MIT License
- */
-
 namespace Equidna\BirdFlock\Tests\Unit\Repositories;
 
 use Equidna\BirdFlock\Models\OutboundMessage;
 use Equidna\BirdFlock\Repositories\EloquentOutboundMessageRepository;
 use Equidna\BirdFlock\Tests\TestCase;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Capsule\Manager as Capsule;
+use Illuminate\Database\Schema\Blueprint;
 
 final class EloquentOutboundMessageRepositoryTest extends TestCase
 {
-    public function testUpdateStatusSetsSentAtWhenStatusIsSent(): void
+    private Capsule $capsule;
+    private EloquentOutboundMessageRepository $repository;
+
+    protected function setUp(): void
     {
-        $mockModel = $this->createMock(OutboundMessage::class);
-        $mockModel->expects($this->once())
-            ->method('update')
-            ->with($this->callback(function ($data) {
-                return $data['status'] === 'sent'
-                    && isset($data['sentAt'])
-                    && isset($data['providerMessageId']);
-            }));
+        parent::setUp();
 
-        $mockBuilder = $this->getMockBuilder(\Illuminate\Database\Eloquent\Builder::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $mockBuilder->expects($this->once())
-            ->method('orWhere')
-            ->willReturnSelf();
-
-        $mockBuilder->expects($this->once())
-            ->method('lockForUpdate')
-            ->willReturnSelf();
-
-        $mockBuilder->expects($this->once())
-            ->method('first')
-            ->willReturn($mockModel);
-
-        DB::shouldReceive('transaction')
-            ->once()
-            ->andReturnUsing(function ($callback) {
-                return $callback();
-            });
-
-        OutboundMessage::partialMock()
-            ->shouldReceive('where')
-            ->once()
-            ->with('providerMessageId', 'MSG123')
-            ->andReturn($mockBuilder);
-
-        $repository = new EloquentOutboundMessageRepository();
-        $repository->updateStatus('MSG123', 'sent', ['provider_message_id' => 'PROV123']);
-    }
-
-    public function testUpdateStatusSetsDeliveredAtWhenStatusIsDelivered(): void
-    {
-        $mockModel = $this->createMock(OutboundMessage::class);
-        $mockModel->expects($this->once())
-            ->method('update')
-            ->with($this->callback(function ($data) {
-                return $data['status'] === 'delivered'
-                    && isset($data['deliveredAt']);
-            }));
-
-        $mockBuilder = $this->getMockBuilder(\Illuminate\Database\Eloquent\Builder::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $mockBuilder->expects($this->once())
-            ->method('orWhere')
-            ->willReturnSelf();
-
-        $mockBuilder->expects($this->once())
-            ->method('lockForUpdate')
-            ->willReturnSelf();
-
-        $mockBuilder->expects($this->once())
-            ->method('first')
-            ->willReturn($mockModel);
-
-        DB::shouldReceive('transaction')
-            ->once()
-            ->andReturnUsing(function ($callback) {
-                return $callback();
-            });
-
-        OutboundMessage::partialMock()
-            ->shouldReceive('where')
-            ->once()
-            ->with('providerMessageId', 'MSG123')
-            ->andReturn($mockBuilder);
-
-        $repository = new EloquentOutboundMessageRepository();
-        $repository->updateStatus('MSG123', 'delivered');
-    }
-
-    public function testUpdateStatusSetsFailedAtWhenStatusIsFailed(): void
-    {
-        $mockModel = $this->createMock(OutboundMessage::class);
-        $mockModel->expects($this->once())
-            ->method('update')
-            ->with($this->callback(function ($data) {
-                return $data['status'] === 'failed'
-                    && isset($data['failedAt'])
-                    && isset($data['errorCode'])
-                    && isset($data['errorMessage']);
-            }));
-
-        $mockBuilder = $this->getMockBuilder(\Illuminate\Database\Eloquent\Builder::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $mockBuilder->expects($this->once())
-            ->method('orWhere')
-            ->willReturnSelf();
-
-        $mockBuilder->expects($this->once())
-            ->method('lockForUpdate')
-            ->willReturnSelf();
-
-        $mockBuilder->expects($this->once())
-            ->method('first')
-            ->willReturn($mockModel);
-
-        DB::shouldReceive('transaction')
-            ->once()
-            ->andReturnUsing(function ($callback) {
-                return $callback();
-            });
-
-        OutboundMessage::partialMock()
-            ->shouldReceive('where')
-            ->once()
-            ->with('providerMessageId', 'MSG123')
-            ->andReturn($mockBuilder);
-
-        $repository = new EloquentOutboundMessageRepository();
-        $repository->updateStatus('MSG123', 'failed', [
-            'error_code' => 'ERR',
-            'error_message' => 'Failed'
+        $this->capsule = new Capsule();
+        $this->capsule->addConnection([
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
         ]);
+        $this->capsule->addConnection([
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+        ], 'bird_flock');
+        $this->capsule->setAsGlobal();
+        $this->capsule->bootEloquent();
+
+        app()->instance('db', $this->capsule->getDatabaseManager());
+
+        $this->createOutboundMessagesTable($this->capsule->getConnection()->getSchemaBuilder());
+        $this->repository = new EloquentOutboundMessageRepository();
     }
 
-    public function testUpdateStatusDoesNothingWhenMessageNotFound(): void
+    public function testCreateAndFindByIdempotencyKeyUseDefaultConnectionWhenNotConfigured(): void
     {
-        $mockBuilder = $this->getMockBuilder(\Illuminate\Database\Eloquent\Builder::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $id = $this->repository->create($this->messageData([
+            'id_outboundMessage' => '01J00000000000000000000001',
+            'idempotencyKey' => 'default-key',
+        ]));
 
-        $mockBuilder->expects($this->once())
-            ->method('orWhere')
-            ->willReturnSelf();
+        $message = $this->repository->findByIdempotencyKey('default-key');
 
-        $mockBuilder->expects($this->once())
-            ->method('lockForUpdate')
-            ->willReturnSelf();
-
-        $mockBuilder->expects($this->once())
-            ->method('first')
-            ->willReturn(null);
-
-        DB::shouldReceive('transaction')
-            ->once()
-            ->andReturnUsing(function ($callback) {
-                return $callback();
-            });
-
-        OutboundMessage::partialMock()
-            ->shouldReceive('where')
-            ->once()
-            ->with('providerMessageId', 'NONEXISTENT')
-            ->andReturn($mockBuilder);
-
-        $repository = new EloquentOutboundMessageRepository();
-        $repository->updateStatus('NONEXISTENT', 'sent');
-
-        $this->assertTrue(true);
+        $this->assertSame('01J00000000000000000000001', $id);
+        $this->assertSame('01J00000000000000000000001', $message['id_outboundMessage']);
     }
 
-    public function testFindByIdempotencyKeyReturnsArrayWhenFound(): void
+    public function testUpdateStatusSetsProviderStatusAndTimestamp(): void
     {
-        $mockModel = $this->createMock(OutboundMessage::class);
-        $mockModel->expects($this->once())
-            ->method('toArray')
-            ->willReturn(['id' => 'MSG123', 'status' => 'sent']);
+        $this->repository->create($this->messageData([
+            'id_outboundMessage' => '01J00000000000000000000002',
+        ]));
 
-        $mockBuilder = $this->getMockBuilder(\Illuminate\Database\Eloquent\Builder::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->repository->updateStatus('01J00000000000000000000002', 'sent', [
+            'provider_message_id' => 'PROV123',
+        ]);
 
-        $mockBuilder->expects($this->once())
-            ->method('first')
-            ->willReturn($mockModel);
+        $message = OutboundMessage::find('01J00000000000000000000002');
 
-        OutboundMessage::partialMock()
-            ->shouldReceive('where')
-            ->once()
-            ->with('idempotencyKey', 'IDEMPOTENCY123')
-            ->andReturn($mockBuilder);
-
-        $repository = new EloquentOutboundMessageRepository();
-        $result = $repository->findByIdempotencyKey('IDEMPOTENCY123');
-
-        $this->assertIsArray($result);
-        $this->assertArrayHasKey('id', $result);
+        $this->assertSame('sent', $message->status);
+        $this->assertSame('PROV123', $message->providerMessageId);
+        $this->assertNotNull($message->sentAt);
     }
 
-    public function testFindByIdempotencyKeyReturnsNullWhenNotFound(): void
+    public function testResetForRetryClearsFailureFields(): void
     {
-        $mockBuilder = $this->getMockBuilder(\Illuminate\Database\Eloquent\Builder::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->repository->create($this->messageData([
+            'id_outboundMessage' => '01J00000000000000000000003',
+            'status' => 'failed',
+            'providerMessageId' => 'PROV123',
+            'errorCode' => 'ERR',
+            'errorMessage' => 'Failed',
+            'attempts' => 2,
+        ]));
 
-        $mockBuilder->expects($this->once())
-            ->method('first')
-            ->willReturn(null);
+        $this->repository->resetForRetry('01J00000000000000000000003', [
+            'idempotencyKey' => 'retry-key',
+        ]);
 
-        OutboundMessage::partialMock()
-            ->shouldReceive('where')
-            ->once()
-            ->with('idempotencyKey', 'NONEXISTENT')
-            ->andReturn($mockBuilder);
+        $message = OutboundMessage::find('01J00000000000000000000003');
 
-        $repository = new EloquentOutboundMessageRepository();
-        $result = $repository->findByIdempotencyKey('NONEXISTENT');
-
-        $this->assertNull($result);
+        $this->assertSame('queued', $message->status);
+        $this->assertSame('retry-key', $message->idempotencyKey);
+        $this->assertNull($message->providerMessageId);
+        $this->assertNull($message->errorCode);
+        $this->assertNull($message->errorMessage);
+        $this->assertSame(0, $message->attempts);
     }
 
-    public function testResetForRetryResetsAllFields(): void
+    public function testRepositoryUsesConfiguredConnection(): void
     {
-        $mockModel = $this->createMock(OutboundMessage::class);
-        $mockModel->expects($this->once())
-            ->method('update')
-            ->with($this->callback(function ($data) {
-                return $data['status'] === 'queued'
-                    && isset($data['queuedAt'])
-                    && $data['sentAt'] === null
-                    && $data['deliveredAt'] === null
-                    && $data['failedAt'] === null
-                    && $data['providerMessageId'] === null
-                    && $data['errorCode'] === null
-                    && $data['errorMessage'] === null
-                    && $data['attempts'] === 0
-                    && $data['idempotencyKey'] === 'NEW_KEY';
-            }));
+        config(['bird-flock.database.connection' => 'bird_flock']);
+        $this->createOutboundMessagesTable($this->capsule->getConnection('bird_flock')->getSchemaBuilder());
 
-        $mockBuilder = $this->getMockBuilder(\Illuminate\Database\Eloquent\Builder::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->repository->create($this->messageData([
+            'id_outboundMessage' => '01J00000000000000000000004',
+            'idempotencyKey' => 'configured-key',
+        ]));
 
-        $mockBuilder->expects($this->once())
-            ->method('lockForUpdate')
-            ->willReturnSelf();
+        $this->assertSame(0, $this->capsule->getConnection()->table('bird_flock_outbound_messages')->count());
+        $this->assertSame(1, $this->capsule->getConnection('bird_flock')->table('bird_flock_outbound_messages')->count());
+        $this->assertSame(
+            '01J00000000000000000000004',
+            $this->repository->findByIdempotencyKey('configured-key')['id_outboundMessage']
+        );
+    }
 
-        $mockBuilder->expects($this->once())
-            ->method('first')
-            ->willReturn($mockModel);
+    /**
+     * @param array<string, mixed> $overrides
+     * @return array<string, mixed>
+     */
+    private function messageData(array $overrides = []): array
+    {
+        return array_merge([
+            'id_outboundMessage' => '01J00000000000000000000000',
+            'channel' => 'sms',
+            'to' => '+15005550001',
+            'subject' => null,
+            'templateKey' => null,
+            'payload' => ['text' => 'Hello'],
+            'status' => 'queued',
+            'idempotencyKey' => null,
+            'queuedAt' => now(),
+        ], $overrides);
+    }
 
-        DB::shouldReceive('transaction')
-            ->once()
-            ->andReturnUsing(function ($callback) {
-                return $callback();
-            });
-
-        OutboundMessage::partialMock()
-            ->shouldReceive('where')
-            ->once()
-            ->with('id_outboundMessage', 'MSG123')
-            ->andReturn($mockBuilder);
-
-        $repository = new EloquentOutboundMessageRepository();
-        $repository->resetForRetry('MSG123', ['idempotencyKey' => 'NEW_KEY']);
+    private function createOutboundMessagesTable(object $schema): void
+    {
+        $schema->create('bird_flock_outbound_messages', function (Blueprint $table) {
+            $table->char('id_outboundMessage', 26)->primary();
+            $table->enum('channel', ['sms', 'whatsapp', 'email']);
+            $table->string('to', 320);
+            $table->string('from', 320)->nullable();
+            $table->string('subject', 255)->nullable();
+            $table->string('templateKey', 128)->nullable();
+            $table->json('payload');
+            $table->enum('status', ['queued', 'sending', 'sent', 'delivered', 'failed', 'undeliverable'])->default('queued');
+            $table->string('providerMessageId', 128)->nullable();
+            $table->string('errorCode', 64)->nullable();
+            $table->string('errorMessage', 1024)->nullable();
+            $table->unsignedInteger('attempts')->default(0);
+            $table->unsignedInteger('totalAttempts')->default(0);
+            $table->string('idempotencyKey', 128)->nullable();
+            $table->timestamp('queuedAt')->nullable();
+            $table->timestamp('sentAt')->nullable();
+            $table->timestamp('deliveredAt')->nullable();
+            $table->timestamp('failedAt')->nullable();
+            $table->timestamp('createdAt')->nullable();
+            $table->timestamp('updatedAt')->nullable();
+            $table->unique('idempotencyKey', 'uniq_idempotencyKey');
+        });
     }
 }

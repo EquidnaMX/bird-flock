@@ -12,6 +12,7 @@
 
 namespace Equidna\BirdFlock\Models;
 
+use Equidna\BirdFlock\Support\DatabaseConnection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -52,5 +53,10 @@ class DeadLetterEntry extends Model
     public function getTable()
     {
         return config('bird-flock.dead_letter.table', parent::getTable());
+    }
+
+    public function getConnectionName()
+    {
+        return DatabaseConnection::name();
     }
 }

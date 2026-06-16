@@ -77,6 +77,9 @@ if (! function_exists('now')) {
 
 $configArray = [
     'bird-flock' => [
+        'database' => [
+            'connection' => null,
+        ],
         'default_queue' => 'default',
         'tables' => [
             'prefix' => 'bird_flock_',
