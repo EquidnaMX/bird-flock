@@ -29,6 +29,8 @@ return new class extends Migration {
             // Performance optimization indexes
             $table->index('created_at', 'idx_dlq_created_at');
             $table->index(['channel', 'created_at'], 'idx_dlq_channel_created');
+            $table->index(['error_code', 'created_at'], 'idx_dlq_error_created');
+            $table->index(['channel', 'error_code', 'created_at'], 'idx_dlq_channel_error_created');
         });
     }
 

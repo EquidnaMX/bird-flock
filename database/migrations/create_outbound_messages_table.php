@@ -51,6 +51,10 @@ return new class extends Migration {
             $table->index(['status', 'attempts', 'createdAt'], 'idx_status_attempts_created');
             $table->index('providerMessageId', 'idx_provider_message_id');
             $table->index(['status', 'queuedAt'], 'idx_status_queued_at');
+            $table->index(['channel', 'status', 'queuedAt'], 'idx_channel_status_queued_at');
+            $table->index(['channel', 'createdAt'], 'idx_channel_created_at');
+            $table->index(['templateKey', 'createdAt'], 'idx_template_created_at');
+            $table->index(['to', 'channel', 'createdAt'], 'idx_recipient_channel_created');
         });
     }
 

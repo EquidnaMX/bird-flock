@@ -111,6 +111,14 @@ abstract class FeatureTestCase extends TestCase
                 $table->unique('idempotencyKey', 'uniq_idempotencyKey');
                 $table->index(['providerMessageId', 'status'], 'idx_provider_status');
                 $table->index(['channel', 'status'], 'idx_channel_status');
+                $table->index('createdAt', 'idx_created_at');
+                $table->index(['status', 'attempts', 'createdAt'], 'idx_status_attempts_created');
+                $table->index('providerMessageId', 'idx_provider_message_id');
+                $table->index(['status', 'queuedAt'], 'idx_status_queued_at');
+                $table->index(['channel', 'status', 'queuedAt'], 'idx_channel_status_queued_at');
+                $table->index(['channel', 'createdAt'], 'idx_channel_created_at');
+                $table->index(['templateKey', 'createdAt'], 'idx_template_created_at');
+                $table->index(['to', 'channel', 'createdAt'], 'idx_recipient_channel_created');
             });
         }
 
@@ -129,6 +137,10 @@ abstract class FeatureTestCase extends TestCase
 
                 $table->index('message_id', 'dlq_message_id');
                 $table->index('channel', 'dlq_channel');
+                $table->index('created_at', 'idx_dlq_created_at');
+                $table->index(['channel', 'created_at'], 'idx_dlq_channel_created');
+                $table->index(['error_code', 'created_at'], 'idx_dlq_error_created');
+                $table->index(['channel', 'error_code', 'created_at'], 'idx_dlq_channel_error_created');
             });
         }
     }
