@@ -18,7 +18,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Equidna\BirdFlock\DTO\FlightPlan;
-use Equidna\BirdFlock\Support\BackoffStrategy;
 
 /**
  * Routes messages to appropriate channel-specific sending jobs.
@@ -59,11 +58,7 @@ final class DispatchMessageJob implements ShouldQueue
 
         if ($job) {
             $queue = config('bird-flock.default_queue', 'default');
-            $attemptIndex = max(0, $this->attempts() - 1);
-            $delay = BackoffStrategy::exponentialWithJitter($attemptIndex);
-
-            $delaySeconds = max(1, (int) ceil($delay / 1000));
-            $job->onQueue($queue)->delay($delaySeconds);
+            $job->onQueue($queue);
 
             dispatch($job);
         }

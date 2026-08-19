@@ -11,7 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No unreleased changes.
+### Fixed
+
+- Channel send jobs are now queued immediately on their first attempt. Retry backoff remains applied only after a
+  provider failure, removing an unnecessary one-to-two-second delay from initial SMS, WhatsApp, and email delivery.
 
 ## [1.5.0] - 2026-06-16 - "Osprey"
 
